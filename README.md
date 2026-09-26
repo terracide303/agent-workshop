@@ -123,6 +123,21 @@ Three properties do the real work:
 
 **Full reference, all 24 commands: [`docs/BOARD.md`](docs/BOARD.md).**
 
+## Seeing the whole board at once
+
+Optional — the command line does everything without it.
+
+```sh
+./page.sh              # serve every project's board at http://127.0.0.1:8765
+./page.sh 9000         # another port, if 8765 is taken
+./page.sh --build      # write index.html once and open the file instead
+```
+
+**It holds no state of its own.** It renders the `docs/PLAN.md` files, so if the
+page and a plan file ever disagree, **the plan file is right.** The first render
+is slow — it replays every revision of every plan file, so give it a minute before
+deciding it is broken.
+
 ---
 
 ## The seats, and why these ones
@@ -163,6 +178,8 @@ first; `@build` may not re-open the design decision.
 | [`roles/`](roles/) | one brief per seat: what it owns, what it never does | your own, every session |
 | [`start.sh`](start.sh) | **the only file you run.** Sets up, and adds a project | first, and per project |
 | [`board.py`](board.py) | the board, as a command line | daily |
+| [`page.sh`](page.sh) | **the board as a web page**, optional — renders the plan files, stores nothing | when you want to see it all |
+| [`skills/`](skills/) | agent skills + `install_skills.sh` — **ships one example, delete it** | when a skill earns its place |
 | [`check.sh`](check.sh) | the mechanical checks — **a pattern to fill in, not a rule set** | before every commit |
 | **[`docs/BOARD.md`](docs/BOARD.md)** | **the board's full reference** — every command, `{refined}`, checkers, notes | first time you move a card |
 
@@ -206,16 +223,11 @@ runs without the rules that make an established one fast, and nothing shortcuts
 that except doing the retrospectives.** A rulebook inherited from someone else's
 accidents is one you will neither believe nor maintain.
 
-**A web page, optional.** `./page.sh` serves every project's board at
-http://127.0.0.1:8765 — or `./page.sh --build` writes `index.html` once and you
-open the file. **It holds no state of its own**: it renders the `docs/PLAN.md`
-files, so if it ever disagrees with one, the plan file is right. The first render
-is slow — it replays every revision of every plan file. Nothing else needs it;
-the command line does everything.
-
-**And it is not a project-management tool or an agent framework.** No server, no
-database, no daemon — markdown, one Python script, a set of briefs. Remove the
-discipline and what is left is a folder of files.
+**And it is not a project-management tool or an agent framework.** No database, no
+daemon, and no service you have to keep running — `page.sh` is a renderer you
+start when you want it and kill when you do not, and it stores nothing. Underneath
+it is markdown, one Python script and a set of briefs. Remove the discipline and
+what is left is a folder of files.
 
 ## Licence
 
