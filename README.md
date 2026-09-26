@@ -122,9 +122,16 @@ command line — same file either way.
 
 `[ ]` to do · `[~]` doing · `[x]` done · `[?]` unrefined · `[c]` needs checking
 
+**Full reference, including every command: [`docs/BOARD.md`](docs/BOARD.md).**
+One thing worth knowing before it catches you out: **a feature heading needs
+`{refined}` before its stories can be pulled.** That is a human saying the stories
+are written and owned. Without it `next` hands out nothing.
+
 Three properties do the real work:
 
-- **`done` refuses without evidence.** Not "it works" — the measurement.
+- **`done` refuses to close a story with no evidence** — either the closing
+  condition already written after the `—`, or `--evidence` now. Not "it works":
+  the measurement.
 - **Unrefined work cannot be pulled.** A story with no owner and no closing
   condition is not ready, and `{refined}` is a human saying so out loud.
 - **`next` explains its choice**, so a session never opens with "what now".
@@ -169,6 +176,7 @@ first; `@build` may not re-open the design decision.
 | [`board.py`](board.py) | the board, as a command line | daily |
 | [`check.sh`](check.sh) | the mechanical checks — **a pattern to fill in, not a rule set** | before every commit |
 | [`new_project.sh`](new_project.sh) | start a project with all of the above in place | once per project |
+| **[`docs/BOARD.md`](docs/BOARD.md)** | **the board's full reference** — every command, `{refined}`, checkers, notes | first time you move a card |
 
 ---
 
@@ -190,6 +198,20 @@ looked correct because the errors cancelled.
 
 **4. Evidence, or it did not happen.** "Verified" with no measurement behind it
 is the most expensive sentence in a repository.
+
+---
+
+## What is deliberately not here
+
+**No web dashboard.** The original had one; it is not ported. Everything works
+from the command line, and the board is a file you can read.
+
+**No skills bundled.** `new_project.sh` writes a card asking `@scout` to find and
+judge the ones your project needs, and the verdicts go in
+[`CATALOGUE.md`](CATALOGUE.md). Handing you someone else's skill list would be the
+same mistake as handing you someone else's rules.
+
+**No domain rules.** See [`RULES.md`](RULES.md) — that is the whole point.
 
 ---
 
