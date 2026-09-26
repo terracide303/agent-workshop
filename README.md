@@ -16,68 +16,58 @@ Friday. **Every rule here exists because one of those cost a day.**
 
 ---
 
-## Start in three commands
+# Getting started
+
+**Two commands. The second one asks you everything it needs.**
 
 ```sh
-git clone https://github.com/<you>/agent-workshop.git workshop
-cd workshop
-./setup.sh                              # asks two questions, once
-./new_project.sh MyThing "what it is"
+git clone https://github.com/terracide303/agent-workshop.git workshop
+cd workshop && ./start.sh
 ```
 
-`new_project.sh` runs `setup.sh` for you if you skip it.
+That is it. `start.sh` asks your name, whether your agent sessions run on one
+computer or several, and what your first project is — then creates it, puts two
+cards on its board, and prints the single line you paste into an agent session to
+begin.
 
-It asks what kind of project it is, then creates `../MyThing` beside the
-workshop, with a board, a live-state page, a decisions log, a git repo, and
-**two cards already on it**:
+**You need:** `git`, `python3` (any version — `board.py` is pure standard
+library), and a coding agent such as Claude Code. `gh` is optional; without it
+your projects are local git only.
 
-- `#1` **find and judge the working examples** → `@scout`
-- `#2` **what must this do, and how will we know** → you
-
-Then it prints the line that starts your first session. That layout matters:
-projects sit **beside** the workshop, so `../workshop/` resolves from inside any
-of them.
+**Clone it into a folder called `workshop`.** The name matters, because projects
+sit *beside* it and every seat's start line uses `../workshop/`:
 
 ```
-dhs-agent/
+work/
   workshop/     <- this repo
-  MyThing/      <- ../workshop/ resolves from in here
+  Blinky/       <- ../workshop/ resolves from in here
   OtherThing/
 ```
 
----
+Run `./start.sh` again any time to add another project — it remembers your
+answers and only asks about the new one.
 
-## How to start an agent
+## What happens after that
 
-Every seat starts the same way. Open a fresh session **inside the project
-folder** and paste one line:
+`start.sh` hands you a line like this, and tells you to open a **fresh** agent
+session in the project folder and paste it:
 
 ```
-You are @scout on MyThing. Run `git pull` in both this project and ../workshop
-first, then read ../workshop/roles/scout.md, then run ../workshop/board.py inbox
---who scout and ../workshop/board.py next MyThing --who scout, and do what it says.
+You are @scout on Blinky. Run `git pull` in both this project and ../workshop first, then read ../workshop/roles/scout.md, then run ../workshop/board.py inbox --who scout and ../workshop/board.py next Blinky --who scout, and do what it says.
 ```
 
-Swap `scout` for `design`, `test` or `review`. All the lines are in
-[`START.md`](START.md).
+The session reads its brief, picks up card `#1`, does that one thing, commits the
+work and the board move together, and **asks you to `/clear`**. Then you paste the
+next seat's line — `@design` to build, `@test` to check, `@review` to read it
+cold. They are all in [`START.md`](START.md).
 
-**Why the line is shaped like that:**
-
-- **`git pull` first**, because the session reads its brief from *its own*
-  checkout. A stale checkout gives a stale brief — or none at all.
-- **`inbox`** delivers messages from you *and checks the seat in*, so you can see
-  who is working on what.
-- **`next`** hands it exactly one ticket and says **why that one**.
-
-Then: it does the one thing, commits the work and the board move together,
-pushes, and **asks you to `/clear`**. One ticket, one session. A session long
-enough to be summarised has swapped the real state for a summary of it.
-
----
+**One ticket, one session, then clear.** A session long enough to be summarised
+has swapped the real state for a summary of it, and a summary of a repository is
+not a repository. Clearing is only cheap because coming back is one paste.
 
 ## One computer, or several?
 
-**`setup.sh` asks this first, because it changes how the seats reach each other.**
+**`start.sh` asks this, because it changes how the seats reach each other.**
 
 **One computer** — seats can nudge each other directly. Two sessions open on the
 same machine can message each other by name, so a hand-over does not wait for a
@@ -173,9 +163,9 @@ first; `@build` may not re-open the design decision.
 | **[`RETROSPECTIVE.md`](RETROSPECTIVE.md)** | **the ritual that fills `RULES.md`.** This is the actual product | end of every phase |
 | **[`START.md`](START.md)** | the line that starts or resumes each seat | coming back after a clear |
 | [`roles/`](roles/) | one brief per seat: what it owns, what it never does | your own, every session |
+| [`start.sh`](start.sh) | **the only file you run.** Sets up, and adds a project | first, and per project |
 | [`board.py`](board.py) | the board, as a command line | daily |
 | [`check.sh`](check.sh) | the mechanical checks — **a pattern to fill in, not a rule set** | before every commit |
-| [`new_project.sh`](new_project.sh) | start a project with all of the above in place | once per project |
 | **[`docs/BOARD.md`](docs/BOARD.md)** | **the board's full reference** — every command, `{refined}`, checkers, notes | first time you move a card |
 
 ---
@@ -206,7 +196,7 @@ is the most expensive sentence in a repository.
 **No web dashboard.** The original had one; it is not ported. Everything works
 from the command line, and the board is a file you can read.
 
-**No skills bundled.** `new_project.sh` writes a card asking `@scout` to find and
+**No skills bundled.** `start.sh` writes a card asking `@scout` to find and
 judge the ones your project needs, and the verdicts go in
 [`CATALOGUE.md`](CATALOGUE.md). Handing you someone else's skill list would be the
 same mistake as handing you someone else's rules.

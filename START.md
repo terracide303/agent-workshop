@@ -49,10 +49,12 @@ project sits beside the workshop.
 
 ```sh
 mkdir -p ~/work && cd ~/work
-git clone https://github.com/<you>/agent-workshop.git workshop
-./workshop/setup.sh
-./workshop/new_project.sh MyThing "what it is"
+git clone https://github.com/terracide303/agent-workshop.git workshop
+cd workshop && ./start.sh
 ```
+
+`start.sh` is the only file you run. It asks what it needs, creates the project
+beside the workshop, and prints the line to paste. Run it again to add another.
 
 ```
 work/
