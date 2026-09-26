@@ -112,19 +112,16 @@ command line — same file either way.
 
 `[ ]` to do · `[~]` doing · `[x]` done · `[?]` unrefined · `[c]` needs checking
 
-**Full reference, including every command: [`docs/BOARD.md`](docs/BOARD.md).**
-One thing worth knowing before it catches you out: **a feature heading needs
-`{refined}` before its stories can be pulled.** That is a human saying the stories
-are written and owned. Without it `next` hands out nothing.
-
 Three properties do the real work:
 
 - **`done` refuses to close a story with no evidence** — either the closing
-  condition already written after the `—`, or `--evidence` now. Not "it works":
-  the measurement.
-- **Unrefined work cannot be pulled.** A story with no owner and no closing
-  condition is not ready, and `{refined}` is a human saying so out loud.
+  condition written after the `—`, or `--evidence` now. Not "it works": the
+  measurement.
+- **A feature needs `{refined}`** before its stories can be pulled — a human
+  saying they are written and owned. Without it, `next` hands out nothing.
 - **`next` explains its choice**, so a session never opens with "what now".
+
+**Full reference, all 24 commands: [`docs/BOARD.md`](docs/BOARD.md).**
 
 ---
 
@@ -193,27 +190,27 @@ is the most expensive sentence in a repository.
 
 ## What is deliberately not here
 
+**No curated skill list.** The *machinery* is here — [`skills/`](skills/) with one
+example gate, `install_skills.sh` / `install_skills.ps1` to link them into
+`~/.claude/skills`, and a line in every role brief telling the seat to **name the
+skills it can actually see**, because one that did not load fails silently. What
+is absent is a list of which skills to use: `start.sh` writes cards asking
+`@scout` to find, judge and install the ones **your** project needs. Handing you
+someone else's skill list is the same mistake as handing you someone else's rules
+— in the survey this came from, five candidates matched the search and four had to
+be rejected for reasons no search could see.
+
+**No rules for your domain.** [`RULES.md`](RULES.md) has one. **Your first project
+runs without the rules that make an established one fast, and nothing shortcuts
+that except doing the retrospectives.** A rulebook inherited from someone else's
+accidents is one you will neither believe nor maintain.
+
 **No web dashboard.** The original had one; it is not ported. Everything works
 from the command line, and the board is a file you can read.
 
-**No skills bundled.** `start.sh` writes a card asking `@scout` to find and
-judge the ones your project needs, and the verdicts go in
-[`CATALOGUE.md`](CATALOGUE.md). Handing you someone else's skill list would be the
-same mistake as handing you someone else's rules.
-
-**No domain rules.** See [`RULES.md`](RULES.md) — that is the whole point.
-
----
-
-## What this is not
-
-**Not a project-management tool, and not an agent framework.** There is no
-server, no database and no daemon — it is markdown, a Python script and a set of
-briefs. If you remove the discipline, what is left is a folder of files.
-
-**Not a substitute for knowing your own domain.** It ships with no domain rules
-on purpose. Your first project runs without the rules that make it fast, and
-nothing can shortcut that except doing the retrospectives.
+**And it is not a project-management tool or an agent framework.** No server, no
+database, no daemon — markdown, one Python script, a set of briefs. Remove the
+discipline and what is left is a folder of files.
 
 ## Licence
 

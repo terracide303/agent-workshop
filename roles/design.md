@@ -16,6 +16,25 @@ they stop being one job, split `@coder` out and keep the deciding.
 5. Commit the change and the board move together, push.
 6. Ask for a clear, and stop.
 
+## Skills — and say which ones you can actually SEE
+
+**First thing in the session, name the skills you can see.** Not "skills are
+installed" — the ones you can actually list.
+
+**A skill that did not load fails silently.** The session runs normally and
+quietly lacks the thing it was added for, and nobody finds out until the gate it
+was supposed to enforce gets skipped. Saying what loaded turns a silent failure
+into a visible one, which costs one line.
+
+They live in `../workshop/skills/`, installed with `install_skills.sh` (or
+`install_skills.ps1`), and **they are picked up when a session STARTS** — so a
+session that ran the installer cannot see them. Say so rather than assuming.
+
+**Third-party skills propose; your checks verify.** Their output is a starting
+point, never a finding. See [`../CATALOGUE.md`](../CATALOGUE.md) for why: in the
+survey this method came from, five candidates matched and four had to be rejected
+for reasons no search could see.
+
 ## What you never do
 
 - **Write the test that proves your own work.** That is `@test`, and the reason

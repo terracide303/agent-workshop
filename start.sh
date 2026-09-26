@@ -60,6 +60,17 @@ EOF
     echo
     echo "  ok — saved. Re-run this file any time to change it or add a project."
     echo
+    echo "  Linking skills into ~/.claude/skills …"
+    if [ "$(uname -s 2>/dev/null)" = "Darwin" ] || [ "$(uname -s 2>/dev/null)" = "Linux" ]; then
+        "$SHOP/install_skills.sh" 2>&1 | sed 's/^/    /' || true
+    else
+        echo "    on Windows, run:  .\\install_skills.ps1"
+    fi
+    echo
+    echo "  Skills load when a session STARTS, and one that did NOT load fails"
+    echo "  silently — so every role brief tells the seat to name the skills it can"
+    echo "  actually see. skills/ ships with one example; delete it and write yours."
+    echo
     if [ "$MACHINES" = one ]; then
         cat <<'EOF'
   ONE COMPUTER, so:
@@ -170,6 +181,8 @@ tick the box. **Unticked and unevidenced are the same thing.** Full reference:
 ### The ground is surveyed {refined}
 - [ ] #1 The working examples for a $KIND project are found and judged — at least three candidates read (not just their READMEs), each with licence, maturity, what it is proven on and **what it does not do**; verdict recorded in \`../workshop/CATALOGUE.md\`; ends in use-it / adapt-it / write-our-own, with a reason @scout
   **This is rule 1 as the first card.** Something already does most of this and works. Find it before inventing a worse one.
+- [ ] #3 Anything worth keeping from #1 is INSTALLED AND CONFIRMED LOADED — the skill is in \`../workshop/skills/<name>/SKILL.md\`, \`install_skills.sh\` has been run, and **a fresh session has named it out loud as one it can see.** Surveyed is not installed; installed is not loaded @scout
+  **A skill that did not load fails silently** — the session works normally and quietly lacks the thing it was added for. So this card does not close on "I installed it"; it closes on a new session listing it. See \`../workshop/skills/README.md\`.
 - [ ] #2 The one thing this project must do is written down, with how we will know it works — one paragraph, and a measurement @you
   Not a feature list. The single outcome that makes it worth doing, and the observation that would prove it.
 EOF
