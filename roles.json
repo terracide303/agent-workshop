@@ -1,0 +1,60 @@
+{
+ "_comment": "Who does what. A story in a plan document is assigned with @role and may name a model with #model; anything unassigned falls to design. A project may override this file with docs/roles.json. THE SEATS ARE SPLIT BY WHAT GOES WRONG WHEN ONE SEAT DOES TWO JOBS -- not by skill. That is why test is not design, and review is neither.",
+ "models": {
+  "opus": "claude-opus-5",
+  "sonnet": "claude-sonnet-5",
+  "haiku": "claude-haiku-4-5-20251001"
+ },
+ "roles": [
+  {
+   "id": "scout",
+   "name": "Scout",
+   "model": "opus",
+   "does": "Searches before anything is written: the reference implementation, the upstream project, the vendor's own example. Reports what exists, its licence and what it does NOT do, and records the verdict in CATALOGUE.md. Never builds.",
+   "prevents": "building what already exists"
+  },
+  {
+   "id": "design",
+   "name": "Design",
+   "model": "opus",
+   "does": "Decides what to change and implements it. Labels its own reasoning as reasoning. One ticket per session, one variable at a time.",
+   "prevents": "typing before deciding"
+  },
+  {
+   "id": "test",
+   "name": "Test",
+   "model": "sonnet",
+   "does": "Writes the check, runs it, reads what it printed, and states what it does NOT prove. Runs every new check against something known broken first. Never fixes what it is testing.",
+   "prevents": "the author testing what they already believe"
+  },
+  {
+   "id": "review",
+   "name": "Review",
+   "model": "opus",
+   "does": "Reads the repository cold -- no summary, no hand-over -- and says what the evidence does not support. Reports, never fixes.",
+   "prevents": "the author judging their own evidence"
+  },
+  {
+   "id": "build",
+   "name": "Build",
+   "optional": true,
+   "model": "sonnet",
+   "does": "OPTIONAL, add when there is CI worth reporting. Runs the suite and reports the numbers. Explicitly not allowed to re-open the design question, and refuses to recommend shipping something that fails.",
+   "prevents": "an implementer quietly re-deciding the design mid-build"
+  },
+  {
+   "id": "scrum",
+   "name": "Scrum",
+   "optional": true,
+   "model": "sonnet",
+   "does": "OPTIONAL, earns its place at about five live tickets. Runs board.py health, chases holds and stale cards, refines nothing itself.",
+   "prevents": "the board quietly going stale"
+  },
+  {
+   "id": "you",
+   "name": "The human",
+   "does": "Decides what the project is for: priority and scope. The last word, and the only seat that spends money or ships.",
+   "prevents": "scope drifting to whatever is interesting"
+  }
+ ]
+}
