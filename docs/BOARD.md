@@ -61,7 +61,7 @@ board.py idea     <project> "text"           # park a thought without scheduling
 
 board.py start    <project> "text"           # [ ] -> [~]
 board.py check    <project> "text"           # [~] -> [c], for a story with a +checker
-board.py done     <project> "text" --evidence "the measurement"   # REFUSES without evidence
+board.py done     <project> "text" [--evidence "the measurement"]  # needs evidence, see below
 board.py reopen   <project> "text"           # [x] -> [ ]
 board.py park     <project> "text"           # out of the live board, kept
 board.py block    <project> "text" "why"     # [!] with a reason
