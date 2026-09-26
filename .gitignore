@@ -1,7 +1,16 @@
+# written by setup, per machine
 workshop.json
+
+# board bookkeeping, local to a machine
 .sessions/
 .inbox/
+
+# the page renders these -- regenerate, never commit
 dashboard/workshop.json
-dashboard/workshop.json.tmp
 index.html
-index.html.tmp
+
+# atomic-write temp files. mkstemp inserts a random suffix, so the pattern has to
+# be a glob: a killed server bypasses Python's cleanup and orphans one, and the
+# narrower "dashboard/workshop.json.tmp" let two of them reach GitHub (2026-09-26).
+*.json.tmp
+*.html.tmp

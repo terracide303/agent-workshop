@@ -341,7 +341,29 @@ class H(BaseHTTPRequestHandler):
         pass
 
 
+def sweep_orphans():
+    """Delete temp files a killed server left behind.
+
+    regenerate() writes to a mkstemp temp file and publishes it with os.replace,
+    and its except-handler unlinks the temp on failure -- but SIGTERM and SIGKILL
+    bypass Python cleanup entirely, so a server killed mid-rebuild orphans one
+    every time. They are ~9 KB each and they accumulate silently. Two of them
+    reached a published repository on 2026-09-26 because the .gitignore pattern
+    did not allow for mkstemp's random suffix.
+    """
+    n = 0
+    for pat in ("dashboard/workshop.*.json.tmp", "index.*.html.tmp"):
+        for f in SHOP.glob(pat):
+            try:
+                f.unlink(); n += 1
+            except OSError:
+                pass
+    if n:
+        print(f"swept {n} orphaned temp file(s) from a previous run")
+
+
 if __name__ == "__main__":
+    sweep_orphans()
     # Bind first, build after: startup used to spend a minute in regenerate()
     # before the socket existed, so the page was refused rather than slow.
     print(f"workshop on http://127.0.0.1:{PORT}   (Ctrl-C to stop)")
