@@ -6,8 +6,16 @@
 #
 # Everything it does is reversible: it writes workshop.json here, and creates one
 # new directory beside this one. It never touches an existing project.
+# Run under bash even if invoked as `sh start.sh`. On a system where /bin/sh is
+# dash this used to die on line 9 with "set: Illegal option -o pipefail", having
+# created nothing -- and the shebang does not help when the shell is named
+# explicitly. Re-exec instead of dropping the strict flags.
+[ -n "${BASH_VERSION:-}" ] || exec bash "$0" "$@"
 set -euo pipefail
-SHOP="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# ${BASH_SOURCE[0]:-$0}: BASH_SOURCE under bash, $0 under dash or any other
+# /bin/sh. Without the fallback, `sh start.sh` on a dash system resolved the
+# workshop to the current directory and exited 2 having created nothing.
+SHOP="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 ROOT="$(dirname "$SHOP")"
 CFG="$SHOP/workshop.json"
 TODAY="$(date +%Y-%m-%d)"
