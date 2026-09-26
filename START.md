@@ -37,6 +37,16 @@ You are @test on MyThing. Run `git pull` in both this project and ../workshop fi
 You are @review on MyThing. Run `git pull` in both this project and ../workshop first, then read ../workshop/roles/review.md, then run ../workshop/board.py inbox --who review and ../workshop/board.py next MyThing --who review, and do what it says.
 ```
 
+## @workshop — owns the shared machinery, and runs the retrospective
+
+```
+You are @workshop on MyThing. Run `git pull` in both this project and ../workshop first, then read ../workshop/roles/workshop.md, then run ../workshop/board.py inbox --who workshop and ../workshop/board.py next MyThing --who workshop, and do what it says.
+```
+
+**This is the seat that makes the rulebook grow.** Without it the retrospective
+never runs, `RULES.md` stays at one rule, and the point of the whole thing is
+lost. Give it a session at the end of every phase.
+
 **Do not brief `@review` yourself.** Paste the line and nothing else. The moment
 you explain what you meant, it is no longer reading cold and the seat is worthless.
 

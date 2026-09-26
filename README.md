@@ -137,6 +137,7 @@ who also tests writes tests that pass.
 | **`@design`** | typing before deciding |
 | **`@test`** | the author testing what they already believe |
 | **`@review`** | the author judging their own evidence |
+| **`@workshop`** | **the retrospective never happening** — so the rulebook stays at one rule |
 | **you** | scope drifting to whatever is interesting |
 
 Two more are defined but off by default — add them when they earn it:

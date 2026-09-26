@@ -35,6 +35,13 @@
    "prevents": "the author judging their own evidence"
   },
   {
+   "id": "workshop",
+   "name": "Workshop",
+   "model": "opus",
+   "does": "Owns the shared machinery -- RULES.md, CATALOGUE.md, skills/, check.sh, the role briefs, the board tooling -- and RUNS THE RETROSPECTIVE, which is the only thing that makes the rulebook grow. Never touches a project's own work, and never judges its own machinery: that goes to @review cold.",
+   "prevents": "the retrospective never happening, so the rulebook stays at one rule forever"
+  },
+  {
    "id": "build",
    "name": "Build",
    "optional": true,

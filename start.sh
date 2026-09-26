@@ -193,6 +193,10 @@ tick the box. **Unticked and unevidenced are the same thing.** Full reference:
   **A skill that did not load fails silently** — the session works normally and quietly lacks the thing it was added for. So this card does not close on "I installed it"; it closes on a new session listing it. See \`../workshop/skills/README.md\`.
 - [ ] #2 The one thing this project must do is written down, with how we will know it works — one paragraph, and a measurement @you
   Not a feature list. The single outcome that makes it worth doing, and the observation that would prove it.
+
+### The rulebook grows, or none of this was worth setting up
+- [?] #4 The first retrospective has been run, and \`../workshop/RULES.md\` has more than one rule — the five questions in \`../workshop/RETROSPECTIVE.md\` answered, and whatever they produced landed in RULES.md, CATALOGUE.md, check.sh or skills/ @workshop
+  **Left UNREFINED on purpose — you cannot reflect on a project that has not done anything yet.** Refine it when the first phase closes, or after any day that cost more than it should have. It is on the board from day one because a ritual nobody owns is the one that gets skipped in the week it would have mattered, and the rulebook growing is the only reason this method beats just working.
 EOF
 
 cat > docs/DECISIONS.md <<EOF
