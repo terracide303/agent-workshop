@@ -25,6 +25,11 @@ this whole repository is lost.
    **with a selftest case**, a gate as a skill in `../skills/`.
 3. **Keep the machinery working.** `board.py`, `start.sh`, the installers, the
    briefs. Fix them when they bite someone.
+4. **Run the page if the human wants one.** `./page.sh` serves every board at
+   http://127.0.0.1:8765; `./page.sh --build` writes `index.html` once instead.
+   **Never let the page hold state of its own** — it renders the plan files, and
+   the moment it stores anything it has become a second place to be wrong. Tell
+   the human the URL, not the file path.
 
 ## The four rules of this seat
 

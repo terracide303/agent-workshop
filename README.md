@@ -206,8 +206,12 @@ runs without the rules that make an established one fast, and nothing shortcuts
 that except doing the retrospectives.** A rulebook inherited from someone else's
 accidents is one you will neither believe nor maintain.
 
-**No web dashboard.** The original had one; it is not ported. Everything works
-from the command line, and the board is a file you can read.
+**A web page, optional.** `./page.sh` serves every project's board at
+http://127.0.0.1:8765 — or `./page.sh --build` writes `index.html` once and you
+open the file. **It holds no state of its own**: it renders the `docs/PLAN.md`
+files, so if it ever disagrees with one, the plan file is right. The first render
+is slow — it replays every revision of every plan file. Nothing else needs it;
+the command line does everything.
 
 **And it is not a project-management tool or an agent framework.** No server, no
 database, no daemon — markdown, one Python script, a set of briefs. Remove the
