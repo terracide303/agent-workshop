@@ -65,6 +65,35 @@ cold. They are all in [`START.md`](START.md).
 has swapped the real state for a summary of it, and a summary of a repository is
 not a repository. Clearing is only cheap because coming back is one paste.
 
+## Talk to @workshop. Seriously.
+
+Every other seat lives inside one project. **@workshop is the one that sees all of
+them** — the board tool, the page, the rules, the briefs, the mail between seats.
+It is your friend, your interface, your partner in crime, your comrade in arms.
+The one who knows where the bodies are buried, because it wrote the burial rules.
+
+Talk to it when:
+
+- **something in the machinery bites** — `board.py` refuses, the page is blank, a
+  script is missing. Other seats will quietly work around it. @workshop fixes it,
+  so the next friend who clones this does not hit it too.
+- **you do not know whose job something is.** It picks the owner. That is the job.
+- **a day went badly.** That is a retrospective, and a retrospective is how
+  `RULES.md` grows past rule 1. No @workshop, no retrospective, no rules. Just
+  vibes. Vibes do not ship.
+- **you just want to ask how it is all going.** It reads every board.
+
+Seats can write to it too:
+
+```sh
+../workshop/board.py msg --to workshop "board.py next says nothing is refined, but I refined it"
+```
+
+Start it like any other seat — its line is in [`START.md`](START.md).
+
+**This is not optional decoration.** A workshop with no @workshop is a kitchen
+where nobody ever washes up: it works great for about a week.
+
 ## One computer, or several?
 
 **`start.sh` asks this, because it changes how the seats reach each other.**
