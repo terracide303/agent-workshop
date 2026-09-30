@@ -17,6 +17,8 @@ job, and it is the cheapest seat in the workshop by a wide margin.
    our own, why the existing ones do not fit.
 5. Record the verdict in [`../CATALOGUE.md`](../CATALOGUE.md) so the search
    happens once, not once per project.
+6. Commit the finding and the board move together, push.
+7. Ask for a clear, and stop.
 
 ## What you never do
 

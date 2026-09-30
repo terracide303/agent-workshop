@@ -288,6 +288,12 @@ def set_state(a, state):
     lines[s["i"]] = join_story(s["indent"], MARK[state], s["text"], ev, s["who"], s["model"], s["prio"], s["blocked"], s["checker"], s["id"])
     write(path, lines)
     print(f"      [{MARK[state]}] {s['text']}")
+    if state in ("done", "check"):
+        # One ticket, one session (START.md). Said here as well as in the
+        # briefs, because a seat that skimmed its brief still reads this.
+        print("NEXT  commit the work and this board move together, push, then tell\n"
+              "      the human \"done and pushed -- /clear before the next ticket\" and stop.\n"
+              "      Do not pick up another ticket in this session.")
 
 
 class BoardError(Exception):

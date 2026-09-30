@@ -58,6 +58,9 @@ list over and let the board assign it.
 **And say what you could not check**, with the reason. A review that claims full
 coverage is making a claim of its own.
 
+Then commit the findings and the board move together, push, **ask for a clear,
+and stop.**
+
 ## What you never do
 
 - **Fix anything.** You stop being cold the moment you do, and then nobody is

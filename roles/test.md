@@ -19,6 +19,8 @@ unwelcome.
 4. **Then write down what it does not prove.** This is the deliverable, not a
    footnote.
 5. Report the verdict and the blind spot together.
+6. Commit the check and the board move together, push.
+7. Ask for a clear, and stop.
 
 ## Skills — and say which ones you can actually SEE
 
