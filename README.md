@@ -65,6 +65,36 @@ cold. They are all in [`START.md`](START.md).
 has swapped the real state for a summary of it, and a summary of a repository is
 not a repository. Clearing is only cheap because coming back is one paste.
 
+## Why it is cheap on tokens
+
+An agent does not remember a conversation — it re-reads the whole thing on every
+turn. So a long session is not just long, it gets **more expensive with every
+message**, and most of what it pays for is old context it no longer needs. This
+workshop is built so that pile never forms:
+
+- **One ticket, one session, then clear.** Every session starts empty and ends
+  before it has grown. Nothing is paid for twice.
+- **The state lives in files, not in the chat.** The board, the notes, the
+  decisions are in the repo. Coming back costs one paste, not re-explaining.
+- **Starting up is small and fixed.** Brief + inbox + `board.py next` measured
+  **about 2,750 tokens** in the workshop this was extracted from.
+- **`board.py next` hands out one ticket.** Without it an agent reads the whole
+  plan to decide what to do — one careless search through a plan file measured
+  **8,380 tokens**, three times the entire startup.
+- **Narrow seats read narrow things.** `@test` reads what it tests, `@review`
+  reads the evidence, nobody reads everything.
+- **One rule, not forty.** A rulebook is re-read every session; this one starts
+  at one rule and only grows when something earned it.
+
+**The one way to lose it:** a live-state file that keeps growing. The workshop
+this came from cut its "where we stand" file to a tenth, and it grew back to
+nearly three times its old size in ten days, because every session added a
+paragraph and none took one out. Keep those files short — trimming them is
+exactly the kind of thing to hand to `@workshop`.
+
+These are measurements from one real workshop, not a benchmark against other
+ways of working.
+
 ## Talk to @workshop. Seriously.
 
 Every other seat lives inside one project. **@workshop is the one that sees all of
