@@ -182,6 +182,10 @@ role's default model, and everything after the dash is the evidence required to
 tick the box. **Unticked and unevidenced are the same thing.** Full reference:
 \`../workshop/docs/BOARD.md\`.
 
+**Every phase ends with a retrospective, and so does every two weeks of work.**
+\`board.py next\` prints RETRO DUE when one is owed; the first comes due on its
+own two weeks after this project starts. How: \`../workshop/RETROSPECTIVE.md\`.
+
 ---
 
 ## Phase 0 — Know what exists before writing anything

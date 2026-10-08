@@ -18,7 +18,9 @@ this whole repository is lost.
 
 1. **Run the retrospective** at the end of every phase, and after any day that
    cost more than it should have. Fifteen minutes. The five questions are in
-   [`../RETROSPECTIVE.md`](../RETROSPECTIVE.md).
+   [`../RETROSPECTIVE.md`](../RETROSPECTIVE.md). You do not have to remember:
+   `board.py next` prints **RETRO DUE** when a phase closes or two weeks pass
+   without one, and it stays up until the Log has a row for it.
 2. **Land what it produces** in the right file — a rule in
    [`../RULES.md`](../RULES.md), a reusable thing in
    [`../CATALOGUE.md`](../CATALOGUE.md), a mechanical check in `../check.sh`

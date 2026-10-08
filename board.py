@@ -771,8 +771,101 @@ def cmd_next(a):
     _, _, stories = load(a.project)
     try:
         _next_body(a, stories)
+        retro_banner(a.project, stories)
     finally:
         unplaced_banner(stories)
+
+
+RETRO_EVERY_DAYS = 14
+LIVE_PHASE_SKIP = re.compile(r"^(Ideas|Cancelled|Archive|Base|Scope)\b", re.I)
+RETRO_ROW = re.compile(r"^\|\s*(\d{4}-\d{2}-\d{2})\s*\|([^|]*)\|(.*)$")
+
+
+def retro_rows(project_name):
+    """Dated rows of RETROSPECTIVE.md's log whose Project cell names this project.
+
+    One log for every project, in the Workshop (one copy). BOARD_RETRO_LOG
+    overrides the path so selftest_board.py can use a throwaway log."""
+    import os
+    log = Path(os.environ.get("BOARD_RETRO_LOG") or SHOP / "RETROSPECTIVE.md")
+    if not log.exists():
+        return []
+    rows = []
+    for line in log.read_text(encoding="utf-8").split("\n"):
+        m = RETRO_ROW.match(line)
+        if m and project_name.lower() in m.group(2).lower():
+            rows.append((m.group(1), m.group(2) + "|" + m.group(3)))
+    return rows
+
+
+def phase_label(phase):
+    """'Phase 5 — Input, sound, polish' -> 'Phase 5'. A log row names this."""
+    return re.split(r"\s+[—–-]\s+", phase, maxsplit=1)[0].strip()
+
+
+def retro_due(project, stories):
+    """Why a retrospective is due on this project, or [] if it is not.
+
+    In the project this method came from, the retrospective log stopped for
+    five weeks and the lessons of that stretch landed nowhere until a
+    whole-project review dug them out. Nothing ever said "today is the day", so
+    it was never done. Two triggers, both cleared by a dated row in
+    RETROSPECTIVE.md's log naming the project:
+
+      1. a phase closes -- every story in it done -- and no row names that phase;
+      2. the last row for this project is older than RETRO_EVERY_DAYS and the
+         project has commits since. A project with no row counts from its first
+         commit, which is what makes a new project's first retro come due
+         "after a while" without anyone remembering it.
+    """
+    import subprocess, datetime
+    name = plan_path(project).resolve().parent
+    if name.name == "docs":
+        name = name.parent
+    root, name = name, name.name
+    rows = retro_rows(name)
+    why = []
+
+    phases = {}
+    for s in stories:
+        if not LIVE_PHASE_SKIP.match(s["phase"]):
+            phases.setdefault(s["phase"], []).append(s["state"])
+    for ph, states in phases.items():
+        if states and all(x == "done" for x in states):
+            label = phase_label(ph).lower()
+            if not any(label in text.lower() for _, text in rows):
+                why.append(f"{phase_label(ph)} is closed and has no retrospective row")
+
+    def git(*args):
+        try:
+            return subprocess.run(["git", "-C", str(root), *args], capture_output=True,
+                                  text=True, timeout=20).stdout.strip()
+        except (OSError, subprocess.TimeoutExpired):
+            return ""
+    last = max((d for d, _ in rows), default="")
+    since = last or (git("log", "--reverse", "--format=%cs").split("\n") or [""])[0]
+    if since:
+        try:
+            age = (datetime.date.today() - datetime.date.fromisoformat(since)).days
+        except ValueError:
+            age = 0
+        if age >= RETRO_EVERY_DAYS and git("log", "-1", "--format=%H", f"--since={since} 23:59:59"):
+            why.append(f"{age} days of work since " +
+                       (f"the last retrospective ({last})" if last else "the project started, and none yet"))
+    return why
+
+
+def retro_banner(project, stories):
+    why = retro_due(project, stories)
+    if not why:
+        return
+    print("\nRETRO DUE    " + why[0])
+    for w in why[1:]:
+        print("             " + w)
+    print("             @workshop runs it: the five questions in ../workshop/RETROSPECTIVE.md,")
+    print("             each answer landing in RULES.md, CATALOGUE.md, check.sh or skills/.")
+    print("             It clears when a dated row naming this project (and the phase, if")
+    print("             one closed) is in that file's Log.")
 
 
 def _next_body(a, stories):

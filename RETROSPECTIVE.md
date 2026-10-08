@@ -10,6 +10,18 @@ has to be yours. This file is how they fill up. In the project this method came
 from, every rule, every gate and every catalogue entry got there this way — **none
 of it was written in advance.**
 
+## When it is due — the board says so
+
+You will not remember to run it; nobody does. So `board.py next <project>`
+prints **RETRO DUE** when either:
+
+- **a phase closes** — every story in it done — and no Log row names that phase;
+- **two weeks of work** have passed since the project's last Log row. A new
+  project counts from its first commit, so the first one comes due on its own.
+
+It clears when a dated row naming the project (and the phase, if one closed) is
+in the Log below. `@workshop` runs it — see [`roles/workshop.md`](roles/workshop.md).
+
 ## The five questions
 
 **1. What did we assume was working that was not?**
