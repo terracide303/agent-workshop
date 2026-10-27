@@ -66,6 +66,9 @@ def price_projects(projects):
                     alias = A.planned_alias(cfg, roles, st) or top
                     st["alias"] = alias
                     st["runs_here"] = not A.provider_ready(cfg, cfg["models"][alias]["provider"], pdir)
+                    real = A.explain(cfg, roles, st, A.runs_of(p["name"], st.get("id"))) if st.get("id") else None
+                    if real:
+                        st["real"] = real         # what it really cost, the estimate, and why
                     if st["state"] == "done":
                         continue
                     st["est"] = round(A.story_cost(cfg, alias, st.get("size") or "M"), 2)
@@ -80,12 +83,24 @@ def price_projects(projects):
                     tot[k] += pt[k]
         p["cost"] = {**{k: round(v, 2) for k, v in tot.items()}, "top_alias": top,
                      "ais": A.project_ais(pdir)}
-    return {k: {"model": m["model"], "provider": m["provider"], "price": m["price"], "tier": m["tier"],
-                "effort": m.get("effort", ""), "runs_here": not A.provider_ready(cfg0, m["provider"])}
-            for k, m in cfg0["models"].items()}
+    shopcfg = json.loads((shop / "workshop.json").read_text()) if (shop / "workshop.json").exists() else {}
+    mine = shopcfg.get("providers")
+    providers = {n: {"name": pr["name"], "how": pr.get("how", ""),
+                     "mine": mine is None or n in mine,
+                     "key_env": pr.get("key_env", ""),
+                     "key_ok": not pr.get("key_env") or bool(os.environ.get(pr["key_env"]))}
+                 for n, pr in cfg0["providers"].items()}
+    models = {k: {"model": m["model"], "provider": m["provider"], "price": m["price"], "tier": m["tier"],
+                  "effort": m.get("effort", ""), "good_for": m.get("good_for", ""),
+                  "runs_here": not A.provider_ready(cfg0, m["provider"])}
+              for k, m in cfg0["models"].items()}
+    return {"models": models, "providers": providers, "sizes": cfg0.get("sizes", {}),
+            "cache": {k: m.get("cache") for k, m in cfg0["models"].items()},
+            "budget": cfg0.get("agents", {}).get("default_budget_usd", 2.0)}
 
 
-models = price_projects(projects)
+priced = price_projects(projects)
+models = priced.get("models", {})
 
 rules = projects[0]["rules"] if projects else []
 for p in projects:
@@ -296,6 +311,10 @@ print(json.dumps({
     "rules": rules,
     "roles": roles,
     "models": models,
+    "providers": priced.get("providers", {}),
+    "agent_budget": priced.get("budget", 2.0),
+    "sizes": priced.get("sizes", {}),
+    "cache": priced.get("cache", {}),
     "status": [digest(p) for p in projects if p.get("board")],
     "howto": howto,
     "skills": skills,

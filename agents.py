@@ -13,6 +13,9 @@ the routing kind @workshop names, or the role's default in roles.json.
                      [--model ds-flash | --kind routine] [--prompt "..."]
                      [--budget 1.50] [--wait]
     agents.py list   [--all]                 every agent: state, model, tokens, cost, doing
+    agents.py next   <project> [--budget 2] [--dry-run]
+                                             Workshop's dispatch: start the next ready card of every
+                                             seat that has one and is free
     agents.py status <id>                    one agent in detail, with its last steps
     agents.py tail   <id> [-n 30] [--follow] what it did, readable
     agents.py send   <id> "message"          the next instruction, in the same session
@@ -20,6 +23,7 @@ the routing kind @workshop names, or the role's default in roles.json.
     agents.py stop   <id>                    kill it now (its session can be resumed)
     agents.py clear  <id>|--done             end the session for good: next work starts fresh
     agents.py cost   <project>               the work left, in money: per phase and feature
+    agents.py why    <project> <#id>         what a story really cost, against the estimate, and why
     agents.py ais    <project> [--use anthropic,deepseek]
                                              which AIs this project uses, and what the work left
                                              would cost with every other choice
@@ -308,6 +312,7 @@ def supervise(aid, prompt, resume):
                     meta["last"] = b["text"].strip()[:300]
                 elif b.get("type") == "tool_use":
                     meta["doing"] = tool_line(b)
+                    meta["steps"] = meta.get("steps", 0) + 1
         elif t == "result":
             meta["result"] = (ev.get("result") or "")[:4000]
             meta["denials"] = [d.get("tool_name") for d in ev.get("permission_denials") or []]
@@ -441,6 +446,55 @@ def cmd_start(a):
           f"budget ${meta['budget']:.3g}\n        agents.py tail {aid[:20]} --follow")
     if a.wait:
         wait_for(aid, a.timeout)
+
+
+def dispatch(project, budget=None, dry_run=False, skip=("you", "workshop")):
+    """The next ready card for every seat that is free: what board.py next would hand each role,
+    one agent per role per project. Returns [(role, story, alias, why-not-or-'')]. Seats that are
+    the human's, or Workshop itself, are never started."""
+    pdir = project_dir(project)
+    cfg, roles = models_cfg(pdir), roles_cfg(pdir)
+    stories = load_board(pdir)
+    busy = {m["role"] for m in map(refresh, all_agents()) if m["project"] == pdir.name and m["status"] in LIVE}
+    plan = []
+    for role in sorted({s["who"] for s in stories if s.get("who")}):
+        if role in skip:
+            continue
+        mine = [s for s in stories if s["who"] == role]
+        if role in busy:
+            continue
+        if any(s["state"] == "wip" and not s["blocked"] for s in mine):
+            continue        # the seat has something in progress: finishing it is a person's call
+        ready = sorted([s for s in mine if s["state"] == "open" and not s["blocked"] and s["feature_refined"]],
+                       key=lambda s: (-s.get("feature_prio", 5), -s["prio"]))
+        if not ready:
+            continue
+        st = ready[0]
+        alias = planned_alias(cfg, roles, st)
+        no = provider_ready(cfg, cfg["models"][alias]["provider"], pdir) if alias else "no AI planned"
+        plan.append((role, st, alias, no))
+    if dry_run:
+        return plan
+    for role, st, alias, no in plan:
+        if no:
+            continue
+        a = argparse.Namespace(project=str(pdir), role=role, story=f"#{st['id']}", model=alias, kind=None,
+                               effort=None, prompt=None, budget=budget, wait=False, timeout=0)
+        try:
+            cmd_start(a)
+        except SystemExit as e:
+            print(f"skip  @{role} #{st['id']}: {e}")
+    return plan
+
+
+def cmd_next(a):
+    plan = dispatch(a.project, a.budget, a.dry_run)
+    if not plan:
+        print("nothing to start: every seat is busy, waiting, or has no ready card")
+        return
+    for role, st, alias, no in plan:
+        print(f"{'would start' if a.dry_run and not no else 'cannot start' if no else 'started'}  "
+              f"@{role} on #{st['id']} {st['text'][:50]} with {alias}" + (f" -- {no}" if no else ""))
 
 
 def ago(iso):
@@ -638,6 +692,84 @@ def planned_alias(cfg, roles, s):
     return role.get("model") if role and role.get("model") in cfg["models"] else None
 
 
+def steps_of(meta):
+    """How many actions an agent took: counted live since 2026-10-27, from its log before that."""
+    if meta.get("steps") is not None:
+        return meta["steps"]
+    n, log = 0, STATE / f"{meta['id']}.log"
+    if log.exists():
+        for line in log.read_text(encoding="utf-8", errors="replace").splitlines():
+            if '"tool_use"' in line:
+                try:
+                    ev = json.loads(line)
+                except ValueError:
+                    continue
+                n += sum(1 for b in ev.get("message", {}).get("content", []) if b.get("type") == "tool_use")
+    return n
+
+
+def runs_of(project_name, story_id):
+    return [m for m in all_agents() if m.get("project") == project_name and m.get("story_id") == story_id]
+
+
+def explain(cfg, roles, story, runs):
+    """What a story really cost against its estimate, and the reasons, in plain words. None when
+    no agent has worked on it. One copy: the page and `agents.py why` both call this."""
+    if not runs:
+        return None
+    top = "opus" if "opus" in cfg["models"] else max(cfg["models"], key=lambda k: cfg["models"][k]["tier"])
+    planned = planned_alias(cfg, roles, story) or top
+    size = story.get("size") or "M"
+    est = story_cost(cfg, planned, size)
+    spent = sum(m.get("cost_usd") or 0 for m in runs)
+    why = []
+    if not story.get("size"):
+        why.append("the card has no size, so it was estimated as a medium (~M)")
+    ran = sorted({m["alias"] for m in runs})
+    if ran != [planned]:
+        r = ran[0]
+        alt = story_cost(cfg, r, size)
+        why.append(f"it ran on {', '.join(ran)} instead of the planned {planned}"
+                   + (f": a typical ~{size} costs ${alt:.3f} there, ${est:.3f} on {planned}" if len(ran) == 1 else ""))
+    z = cfg["sizes"][size]
+    expect = z["in"] + z["out"] + z["cache_read"] + z["cache_write"]
+    used = sum(sum((m.get("tokens") or {}).values()) for m in runs)
+    steps = sum(steps_of(m) for m in runs)
+    ratio = used / expect if expect else 1
+    words = f"{steps} steps, {used/1000:.0f}k tokens where a typical ~{size} uses {expect/1000:.0f}k"
+    if ratio < 0.5:
+        why.append(f"less work than a typical ~{size}: {words}")
+    elif ratio > 1.5:
+        why.append(f"more work than a typical ~{size}: {words}")
+    else:
+        why.append(f"about the work of a typical ~{size}: {words}")
+    if len(runs) > 1:
+        why.append(f"it took {len(runs)} runs: every new run reads the project again from the start")
+    bad = [m["status"] for m in runs if m["status"] in ("failed", "over-budget", "stopped")]
+    if bad:
+        why.append(f"{len(bad)} run(s) ended {', '.join(sorted(set(bad)))}: that money is spent, the work may not be")
+    delta = spent - est
+    pct = round(100 * delta / est) if est else 0
+    verdict = ("about as estimated" if abs(pct) < 25 else
+               f"{abs(pct)}% {'less' if delta < 0 else 'more'} than estimated")
+    return {"spent": round(spent, 4), "estimate": round(est, 4), "delta": round(delta, 4), "pct": pct,
+            "verdict": verdict, "why": why, "runs": len(runs), "ran_on": ran, "planned": planned}
+
+
+def cmd_why(a):
+    pdir = project_dir(a.project)
+    cfg, roles = models_cfg(pdir), roles_cfg(pdir)
+    s = story_of(pdir, a.story)
+    e = explain(cfg, roles, s, runs_of(pdir.name, s["id"]))
+    print(f"#{s['id']} {s['text']}")
+    if not e:
+        print("no agent has worked on it yet: nothing spent")
+        return
+    print(f"spent ${e['spent']:.3f}, estimated ${e['estimate']:.3f} on {e['planned']} -- {e['verdict']}")
+    for w in e["why"]:
+        print("  - " + w)
+
+
 def cmd_cost(a):
     pdir = project_dir(a.project)
     cfg, roles = models_cfg(pdir), roles_cfg(pdir)
@@ -695,6 +827,13 @@ def cmd_cost(a):
             tot[k] += f[k]
     print(f"\n{'total':<38}{'':>17}  {'':<14}{tot['plan']:>10.2f}{tot['top']:>12.2f}{tot['spent']:>9.2f}")
     print("\n? = feature not refined yet    * = some stories have no ~size and are counted as M")
+    worked = [(st, explain(cfg, roles, st, runs_of(pdir.name, st["id"]))) for st in stories if st.get("id")]
+    worked = [(st, e) for st, e in worked if e]
+    if worked:
+        print(f"\nwhat it really cost, against the estimate:")
+        for st, e in worked:
+            print(f"  #{st['id']:<4}{st['text'][:40]:<42}spent ${e['spent']:.3f}  est ${e['estimate']:.3f}  {e['verdict']}")
+            print(f"        why: {e['why'][0]}" + "".join(f"; {w}" for w in e["why"][1:]))
     for n in sorted(notes):
         print("note  " + n)
 
@@ -863,6 +1002,8 @@ s.add_argument("--story"); s.add_argument("--model"); s.add_argument("--kind"); 
 s.add_argument("--prompt"); s.add_argument("--budget", type=float)
 s.add_argument("--wait", action="store_true"); s.add_argument("--timeout", type=int, default=1800)
 s = sub.add_parser("list"); s.add_argument("--all", action="store_true")
+s = sub.add_parser("next"); s.add_argument("project"); s.add_argument("--budget", type=float)
+s.add_argument("--dry-run", action="store_true")
 s = sub.add_parser("status"); s.add_argument("id")
 s = sub.add_parser("tail"); s.add_argument("id"); s.add_argument("-n", type=int, default=30)
 s.add_argument("--follow", action="store_true")
@@ -872,6 +1013,7 @@ s = sub.add_parser("wait"); s.add_argument("id"); s.add_argument("--timeout", ty
 s = sub.add_parser("stop"); s.add_argument("id")
 s = sub.add_parser("clear"); s.add_argument("id", nargs="?"); s.add_argument("--done", action="store_true")
 s = sub.add_parser("cost"); s.add_argument("project")
+s = sub.add_parser("why"); s.add_argument("project"); s.add_argument("story", help="#id or part of the text")
 s = sub.add_parser("ais"); s.add_argument("project"); s.add_argument("--use", help="comma-separated providers from models.json")
 sub.add_parser("report")
 sub.add_parser("selftest")

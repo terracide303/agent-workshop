@@ -139,6 +139,9 @@ class H(BaseHTTPRequestHandler):
                 self._send(200, regenerate())
             except subprocess.CalledProcessError as e:
                 self._send(500, f"<pre>generation failed:\n{e}</pre>")
+        elif self.path == "/api/agents":
+            # live, and cheap: the agents' own state files, no rebuild. The page polls this.
+            self._send(200, json.dumps(agents_now()), "application/json")
         elif self.path == "/api/state":
             # regenerate: this is the refresh button, and a stale answer would
             # defeat the point of having one
@@ -197,6 +200,23 @@ class H(BaseHTTPRequestHandler):
                 return self._send(200, json.dumps(
                     {"ok": True, **self.mail_warn([p, done], f"@{who} read {p.name}")}),
                     "application/json")
+            if self.path == "/api/ais":
+                # the AIs this person really has: workshop.json "providers", the one place it lives
+                cfg = json.loads((SHOP / "models.json").read_text())
+                use = [x for x in req.get("providers", []) if x in cfg["providers"]]
+                if not use:
+                    raise ValueError("keep at least one AI")
+                wpath = SHOP / "workshop.json"
+                w = json.loads(wpath.read_text()) if wpath.exists() else {}
+                w["providers"] = use
+                tmp = wpath.with_suffix(".json.tmp")
+                tmp.write_text(json.dumps(w, indent=2) + "\n")
+                os.replace(tmp, wpath)
+                print(f"  your AIs: {', '.join(use)}")
+                regenerate()
+                return self._send(200, json.dumps({"ok": True}), "application/json")
+            if self.path.startswith("/api/agent/"):
+                return self.agent(self.path.rsplit("/", 1)[1], req)
             project = req["project"]
             if self.path == "/api/move":
                 self.move(project, req)
@@ -332,13 +352,68 @@ class H(BaseHTTPRequestHandler):
         ev = (req.get("evidence") or "").strip() or s["evidence"]
         if to == "done" and not ev:
             raise ValueError("a story closes on evidence")
-        lines[s["i"]] = B["join_story"](s["indent"], B["MARK"][to], s["text"],
-                                        ev, s["who"], s["model"])
-        path.write_text("\n".join(lines))
+        # every field back, not just text/evidence/who/model: the short call dropped the ticket's
+        # number, priority, checker and hold, so a dragged card came back as a new, anonymous one
+        lines[s["i"]] = B["join_story"](s["indent"], B["MARK"][to], s["text"], ev, s["who"], s["model"],
+                                        s["prio"], s["blocked"], s["checker"], s["id"])
+        B["_write_lines"](path, lines)
         print(f"  {project}: [{B['MARK'][to]}] {s['text'][:70]}")
+
+    def agent(self, what, req):
+        """Start, stop, clear or talk to an agent: agents.py does it, run as an argument list
+        (never a shell), with every value checked first. Workshop's own control panel, from the page."""
+        cmd = [sys.executable, str(SHOP / "agents.py")]
+        aid = (req.get("id") or "").strip()
+        if what in ("stop", "clear", "send") and not re.fullmatch(r"[\w.-]{1,120}", aid):
+            raise ValueError("bad agent id")
+        if what == "start":
+            project, sid = req["project"], int(req["story"])
+            st = next((s for s in B["load"](project)[2] if s["id"] == sid), None)
+            if not st or not st["who"]:
+                raise ValueError(f"#{sid} has no owner: say who does it before an agent can")
+            cmd += ["start", project, "--role", st["who"], "--story", f"#{sid}"]
+            if req.get("model"):
+                if not re.fullmatch(r"[a-z][\w.-]{0,40}", req["model"]):
+                    raise ValueError("bad model")
+                cmd += ["--model", req["model"]]
+            if req.get("budget") not in (None, ""):
+                b = float(req["budget"])
+                if not 0 < b <= 50:
+                    raise ValueError("a budget is between $0 and $50")
+                cmd += ["--budget", str(b)]
+        elif what == "next":
+            cmd += ["next", req["project"]] + (["--dry-run"] if req.get("dry_run") else [])
+        elif what in ("stop", "clear"):
+            cmd += [what, aid]
+        elif what == "send":
+            text = (req.get("text") or "").strip()
+            if not text:
+                raise ValueError("say something to send")
+            cmd += ["send", aid, text]
+        else:
+            return self._send(404, "not found", "text/plain")
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=60, cwd=str(SHOP))
+        out = (r.stdout + r.stderr).strip()
+        print(f"  agents.py {' '.join(cmd[2:4])}: {out.splitlines()[0][:90] if out else r.returncode}")
+        if r.returncode != 0:
+            raise ValueError(out or f"agents.py exited {r.returncode}")
+        self._send(200, json.dumps({"ok": True, "out": out}), "application/json")
 
     def log_message(self, *a):
         pass
+
+
+def agents_now():
+    """Every agent agents.py knows on this machine, refreshed (a dead one is reported dead)."""
+    try:
+        spec2 = importlib.util.spec_from_file_location("agents", SHOP / "agents.py")
+        A = importlib.util.module_from_spec(spec2)
+        spec2.loader.exec_module(A)
+        keep = ("id", "project", "story_id", "role", "alias", "status", "cost_usd", "budget", "doing",
+                "last", "why", "updated", "started", "steps", "turns")
+        return [{k: m.get(k) for k in keep} for m in map(A.refresh, A.all_agents()) if m["status"] != "cleared"]
+    except Exception as e:                  # no agents.py, or none run yet: an empty list, not an error
+        return []
 
 
 def sweep_orphans():

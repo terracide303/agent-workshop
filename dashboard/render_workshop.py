@@ -201,6 +201,54 @@ select.priosel{font:inherit;font-size:10.5px;font-weight:600;padding:0 2px;borde
 .tag.mdl.off{background:transparent;color:var(--muted);border:1px dashed var(--line)}
 .tag.size{background:var(--sunk);color:var(--fg);border-color:var(--line)}
 .tag.cost{background:transparent;color:var(--muted);border-color:var(--line)}
+.costl{font-size:11.5px;color:var(--muted);margin-top:4px}
+.moneybar{display:flex;gap:16px;flex-wrap:wrap;align-items:center;font-size:12.5px;margin:-4px 0 12px;color:var(--muted)}
+.moneybar b{color:var(--fg);font-size:14px}
+.aichip,.ibtn,.wsnext{font:inherit;font-size:12px;padding:3px 9px;border-radius:99px;border:1px solid var(--line);background:var(--sunk);color:var(--muted);cursor:pointer;margin-left:4px}
+.aichip[aria-pressed=true]{background:var(--ok-bg);color:var(--ok);border-color:transparent}
+.aichip .warn{color:var(--warn);font-size:10.5px}
+.ibtn{width:22px;height:22px;padding:0;font-style:italic;font-weight:700}
+.wsnext{background:var(--accent);color:var(--bg);border:0;font-weight:600;padding:5px 12px}
+.aitable{margin:-4px 0 14px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--sunk);font-size:12px}
+.aitable table{width:100%;border-collapse:collapse}.aitable td{padding:4px 8px 4px 0;vertical-align:top}
+.aitable tr.notmine{opacity:.55}
+.aslot{margin-top:6px}
+.agent{font-size:11.5px;padding:6px 8px;border-radius:8px;background:var(--sunk);color:var(--muted)}
+.agent b{color:var(--fg)} .agent.run{border-left:3px solid var(--accent)} .agent.ok{border-left:3px solid var(--ok)}
+.agent.bad{border-left:3px solid var(--bad)}
+.agent .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent);animation:pulse 1s infinite alternate}
+@keyframes pulse{to{opacity:.25}}
+.agent .last{margin-top:3px;white-space:normal}
+.astartf{display:grid;gap:6px;font-size:11.5px;padding:8px;border-radius:8px;background:var(--sunk);color:var(--muted)}
+.astartf select,.astartf input{font:inherit;font-size:12px;padding:3px 6px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--fg)}
+.ctx{position:fixed;z-index:50;min-width:260px;max-width:340px;padding:6px;border-radius:10px;border:1px solid var(--line);
+  background:var(--bg);box-shadow:0 10px 30px rgba(0,0,0,.45);font-size:12.5px}
+.ctx .t{padding:4px 8px 6px;color:var(--muted);font-size:11.5px;border-bottom:1px solid var(--line);margin-bottom:4px}
+.ctx button.it{display:block;width:100%;text-align:left;font:inherit;padding:5px 8px;border:0;border-radius:6px;background:none;color:var(--fg);cursor:pointer}
+.ctx button.it:hover{background:var(--sunk)}
+.ctx .row{display:flex;gap:4px;flex-wrap:wrap;align-items:center;padding:4px 8px}
+.ctx .row span{color:var(--muted);font-size:11.5px;width:58px}
+.ctx .row button{font:inherit;font-size:11.5px;padding:2px 7px;border-radius:6px;border:1px solid var(--line);background:var(--sunk);color:var(--fg);cursor:pointer}
+.ctx .row button.on{background:var(--accent);color:var(--bg);border-color:transparent}
+.ctx hr{border:0;border-top:1px solid var(--line);margin:4px 0}
+.costl .off{text-decoration:line-through dotted;opacity:.75}
+.real{font-size:11.5px;margin-top:6px;padding:6px 8px;border-radius:8px;background:var(--sunk);color:var(--muted)}
+.real b{color:var(--fg)}
+.real ul{margin:4px 0 0;padding-left:16px}
+.real li{margin:1px 0}
+.real.under .verdict{color:var(--ok)} .real.over .verdict{color:var(--bad)} .real.even .verdict{color:var(--fg)}
+.nf{display:grid;gap:10px;padding:12px;margin:8px 0 12px;border:1px solid var(--line);border-radius:10px;background:var(--sunk)}
+.nf label{display:grid;gap:4px;font-size:12px;color:var(--muted)}
+.nf input,.nf select{font:inherit;font-size:13px;padding:6px 8px;border-radius:7px;border:1px solid var(--line);background:var(--bg);color:var(--fg)}
+.nf .row{display:flex;gap:12px;flex-wrap:wrap;align-items:end}
+.nf .row label{flex:0 1 220px}
+.nf .sizes{display:flex;gap:4px}
+.nf .sizes button{font:inherit;font-size:12px;padding:5px 9px;border-radius:7px;border:1px solid var(--line);background:var(--bg);color:var(--fg);cursor:pointer}
+.nf .sizes button[aria-pressed=true]{background:var(--accent);color:var(--bg);border-color:transparent}
+.nf details summary{cursor:pointer;font-size:12px;color:var(--muted)}
+.nf .hint{font-size:11.5px;color:var(--muted)}
+.nf .go{display:flex;gap:8px}
+.nf .go button[type=submit]{background:var(--accent);color:var(--bg);border:0;font-weight:600;padding:7px 14px;border-radius:7px;cursor:pointer}
 .costline{display:flex;gap:14px;flex-wrap:wrap;align-items:baseline;font-size:12.5px;margin:-4px 0 14px;color:var(--muted)}
 .costline b{color:var(--fg);font-size:14px}
 .copy{margin-left:auto;font:inherit;font-size:11px;border:1px solid var(--line);background:var(--surface);
@@ -365,6 +413,7 @@ const MK = "workshop.models";
 function loadModels(){ try { return JSON.parse(localStorage.getItem(MK)) || {}; } catch { return {}; } }
 function saveModels(m){ try { localStorage.setItem(MK, JSON.stringify(m)); } catch {} }
 let MODEL_OVERRIDE = loadModels();
+const money2 = v => v == null ? "—" : (v < 0.1 ? `$${v.toFixed(3)}` : `$${v.toFixed(2)}`);
 function modelFor(roleId, storyModel){
   if (storyModel) return storyModel;
   if (MODEL_OVERRIDE[roleId]) return MODEL_OVERRIDE[roleId];
@@ -461,12 +510,47 @@ function board(p){
   const fcost = f => `<span class="mono" title="estimated cost of what is left${f.cost&&f.cost.spent?`; spent so far $${f.cost.spent.toFixed(2)}`:""}">${
     f.cost&&f.cost.plan?`$${f.cost.plan.toFixed(2)}`:(f.cost?"—":"")}</span>`;
   const C = p.cost;
-  const costline = C ? `<div class="costline"><span>work left <b>$${C.plan.toFixed(2)}</b> with the planned AIs</span>
-      <span>$${C.top.toFixed(2)} all on ${esc(C.top_alias||"opus")}</span>
-      <span>spent $${C.spent.toFixed(2)}</span>
-      <span class="mono">agents.py cost ${esc(p.name)} · agents.py ais ${esc(p.name)}</span>
-      <span>estimates from models.json — the retrospective corrects them from what was measured</span></div>` : "";
+  const PV = D.providers || {};
+  const costline = C ? `<div class="moneybar">
+      <span class="ais">Your AIs:
+        ${Object.entries(PV).map(([k,v])=>`<button class="aichip" data-ai="${esc(k)}" aria-pressed="${v.mine}"
+          title="${v.mine?"you use it — click to turn it off":"click if you have it"}${v.mine&&!v.key_ok?` · needs ${esc(v.key_env)} set before it can run`:""}">${v.mine?"✓ ":""}${esc(v.name)}${v.mine&&!v.key_ok?' <span class="warn">no key</span>':""}</button>`).join("")}
+        <button class="ibtn" title="every AI in models.json and its price">i</button></span>
+      <span>work left <b>${money2(C.plan)}</b></span>
+      <span>spent <b>${money2(C.spent)}</b></span>
+      ${SERVED?`<button class="wsnext" title="Workshop starts the next ready card of every free seat">▶ Let Workshop start the next cards</button>`:""}
+    </div>
+    <div class="aitable" hidden>
+      <p class="muted">Workshop only plans on <b>your</b> AIs. The rest are here to compare. Prices per million tokens
+      (input / output), from <span class="mono">models.json</span>. All of this project's work left on
+      ${esc(C.top_alias||"opus")} would be <b>${money2(C.top)}</b>; <span class="mono">agents.py ais ${esc(p.name)}</span>
+      prices it with every choice of AIs.</p>
+      <table>${Object.entries(D.models||{}).map(([k,m])=>`<tr class="${(PV[m.provider]||{}).mine?"":"notmine"}">
+        <td><b>${esc(k)}</b></td><td class="muted">${esc((PV[m.provider]||{}).name||m.provider)}</td>
+        <td class="mono">$${m.price[0]} / $${m.price[1]}</td><td>${esc(m.good_for||"")}</td>
+        <td class="muted">${(PV[m.provider]||{}).mine?(m.runs_here?"yours":"yours, not set up here"):"not yours"}</td></tr>`).join("")}</table>
+    </div>` : "";
 
+  // size, AI and money in one plain line; once an agent has worked on it, what it really cost
+  const SIZEWORD = {XS:"tiny", S:"small", M:"medium", L:"large", XL:"huge"};
+  const money = v => v < 0.1 ? `$${v.toFixed(3)}` : `$${v.toFixed(2)}`;
+  const costLine = s => {
+    const ai = s.alias || modelFor(s.who, s.model);
+    const parts = [];
+    if (s.size) parts.push(SIZEWORD[s.size] || s.size); else if (s.state !== "done") parts.push("no size");
+    if (ai) parts.push(`<span class="${s.runs_here===false?"off":""}" title="${s.runs_here===false
+      ? "this AI cannot run on this computer yet" : "the AI that does it"}">${esc(ai)}</span>`);
+    if (s.est != null && !s.real) parts.push(`about ${money(s.est)}`);
+    let html = parts.length ? `<div class="costl">${parts.join(" · ")}</div>` : "";
+    const r = s.real;
+    if (r) {
+      const cls = Math.abs(r.pct) < 25 ? "even" : (r.delta < 0 ? "under" : "over");
+      html += `<div class="real ${cls}"><b>cost ${money(r.spent)}</b> · estimated ${money(r.estimate)} ·
+        <span class="verdict">${esc(r.verdict)}</span>
+        <ul>${r.why.map(w => `<li>${esc(w)}</li>`).join("")}</ul></div>`;
+    }
+    return html;
+  };
   const card = (p, s) => `<div class="story st-${s.state}${s.blocked?" blocked":""}" draggable="true"
       data-line="${esc(s.line)}" data-state="${s.state}" data-ev="${esc(s.evidence)}"
       data-who="${esc(s.who)}" data-checker="${esc(s.checker||"")}" data-feat="${esc(s.feature||"")}"
@@ -474,6 +558,9 @@ function board(p){
       <b>${s.id?`<span class="tid mono">#${s.id}</span> `:""}${esc(s.text)}</b>
       ${s.blocked?`<span class="blockline">on hold — ${esc(s.blocked)}</span>`:""}
       ${s.evidence?`<span>${esc(s.evidence)}</span>`:'<span class="noev">no evidence stated</span>'}
+      ${costLine(s)}
+      ${s.id?`<div class="aslot" data-p="${esc(p.name)}" data-sid="${s.id}"
+         data-can="${SERVED&&(s.state==="open"||s.state==="wip")?1:0}"></div>`:""}
       ${(s.notes||[]).length?`<div class="notes">${s.notes.slice(-3).map(n=>
           `<div><span class="mono">${esc(n.date)} @${esc(n.who)}</span> ${esc(n.text)}</div>`).join("")}</div>`:""}
       ${s.feature?`<button class="feat feat-link" data-f="${esc(s.feature)}"
@@ -484,10 +571,7 @@ function board(p){
         </select>`:`<span class="tag prio p${s.prio||5}" title="priority, 10 highest">!${s.prio||5}</span>`}
         ${s.who?`<span class="tag who">@${esc(s.who)}</span>`:'<span class="tag">unassigned</span>'}
         ${s.checker?`<span class="tag chk">+${esc(s.checker)} checks</span>`:""}
-        ${s.size?`<span class="tag size" title="size: the amount of work">~${esc(s.size)}</span>`:""}
-        ${(s.alias||modelFor(s.who,s.model))?`<span class="tag mdl${s.runs_here===false?" off":""}"
-           title="${s.runs_here===false?"the AI it is planned on cannot run on this computer":"the AI it runs on"}">${esc(s.alias||modelFor(s.who,s.model))}</span>`:""}
-        ${s.est!=null?`<span class="tag cost" title="estimated cost${s.size?"":" (no size: counted as M)"}">$${s.est.toFixed(2)}</span>`:""}
+
         ${SERVED?`<button class="mini note">note</button>`:""}
         ${SERVED?`<button class="mini edit">edit</button>`:""}
         ${SERVED&&s.state!=="done"?`<button class="mini block">${s.blocked?"unblock":"hold"}</button>`:""}
@@ -544,34 +628,38 @@ function board(p){
           ${ph.done_n}/${ph.total} stories · <b>${ph.pct}%</b>${ph.cost&&ph.cost.plan?` · $${ph.cost.plan.toFixed(2)} left`:""}
           ${SERVED?`<button class="mini addbtn" data-phase="${esc(ph.phase)}">+ ticket</button>`:""}</div>
       </div>
-      ${SERVED?`<form class="tform" hidden data-phase="${esc(ph.phase)}">
-        <div class="frow2">
-          <select name="feature">
-            ${ph.features.map(f=>`<option value="${esc(f.feature)}">${esc(f.feature)}</option>`).join("")}
-            <option value="__new">+ new feature…</option>
-          </select>
-          <input name="newfeature" placeholder="new feature name" hidden>
+      ${SERVED?`<form class="tform nf" hidden data-phase="${esc(ph.phase)}">
+        <label>What has to happen?
+          <input name="text" placeholder="e.g. Tempo goes from 40 to 300 BPM" required></label>
+        <label>How do we know it is done? <span class="hint">a test, a number, a screenshot — not "it works"</span>
+          <input name="evidence" placeholder="e.g. at 120 BPM a beat is exactly 500 ms"></label>
+        <div class="row">
+          <label>Part of feature
+            <select name="feature">
+              ${ph.features.map(f=>`<option value="${esc(f.feature)}">${esc(f.feature)}</option>`).join("")}
+              <option value="__new">+ a new feature…</option>
+            </select>
+            <input name="newfeature" placeholder="name of the new feature" hidden></label>
+          <label>Who does it
+            <select name="who">${((D.roles&&D.roles.roles)||[]).filter(r=>r.id!=="you").map(r=>
+              `<option value="${esc(r.id)}">${esc(r.name||r.id)}</option>`).join("")}
+              <option value="you">You</option></select></label>
+          <label>How big
+            <span class="sizes">${[["XS","tiny"],["S","small"],["M","medium"],["L","large"]].map(([z,w])=>
+              `<button type="button" data-size="${z}" aria-pressed="${z==="S"}">${w}</button>`).join("")}</span>
+            <input type="hidden" name="size" value="S"></label>
         </div>
-        <div class="frow2">
-          <input name="text" placeholder="What has to happen" required style="flex:3">
-          <select name="prio" title="priority, 10 highest">
-            ${[10,9,8,7,6,5,4,3,2,1].map(n=>`<option value="${n}"${n===5?" selected":""}>!${n}</option>`).join("")}
-          </select>
-        </div>
-        <input name="evidence" placeholder="What closes it — the measurement">
-        <div class="frow2">
-          <select name="who">${((D.roles&&D.roles.roles)||[]).map(r=>
-            `<option value="${esc(r.id)}">@${esc(r.id)}</option>`).join("")}</select>
-          <select name="checker"><option value="">nobody checks</option>
-            ${((D.roles&&D.roles.roles)||[]).map(r=>`<option value="${esc(r.id)}">+${esc(r.id)} checks</option>`).join("")}</select>
-          <select name="model" title="the AI it runs on (models.json)"><option value="">role default</option>
-            ${Object.keys(D.models||(D.roles&&D.roles.models)||{}).map(k=>
-              `<option value="${esc(k)}">#${esc(k)}${D.models&&D.models[k]&&!D.models[k].runs_here?" (not here)":""}</option>`).join("")}</select>
-          <select name="size" title="the amount of work"><option value="">size?</option>
-            ${["XS","S","M","L","XL"].map(z=>`<option value="${z}">~${z}</option>`).join("")}</select>
-          <button type="submit">Add</button>
-          <button type="button" class="cancel">Cancel</button>
-        </div>
+        <details><summary>more: priority, a second pair of eyes, a specific AI</summary>
+          <div class="row" style="margin-top:8px">
+            <label>Priority <select name="prio">${[10,9,8,7,6,5,4,3,2,1].map(n=>
+              `<option value="${n}"${n===5?" selected":""}>${n}${n===10?" (highest)":n===1?" (lowest)":""}</option>`).join("")}</select></label>
+            <label>Checked by <select name="checker"><option value="">nobody</option>
+              ${((D.roles&&D.roles.roles)||[]).map(r=>`<option value="${esc(r.id)}">${esc(r.name||r.id)}</option>`).join("")}</select></label>
+            <label>AI <select name="model"><option value="">Workshop picks</option>
+              ${Object.keys(D.models||(D.roles&&D.roles.models)||{}).map(k=>
+                `<option value="${esc(k)}">${esc(k)}${D.models&&D.models[k]&&!D.models[k].runs_here?" (not on this computer)":""}</option>`).join("")}</select></label>
+          </div></details>
+        <div class="go"><button type="submit">Add the card</button><button type="button" class="cancel">Cancel</button></div>
       </form>`:""}
       ${bar(ph.pct, true)}
       <div class="fstrip">${byPrio(ph.features.filter(f=>f.total)).map(f=>`
@@ -1325,6 +1413,9 @@ function draw(){
     const sel = f.querySelector("[name=feature]"), nf = f.querySelector("[name=newfeature]");
     if (!sel || !nf) return;
     sel.onchange = () => { nf.hidden = sel.value !== "__new"; if (!nf.hidden) nf.focus(); };
+    f.querySelectorAll("[data-size]").forEach(b => b.onclick = () => {
+      f.querySelectorAll("[data-size]").forEach(x => x.setAttribute("aria-pressed", x === b));
+      f.size.value = b.dataset.size; });
     f.querySelector(".cancel").onclick = () => { f.hidden = true; };
     f.onsubmit = e => {
       e.preventDefault();
@@ -1516,6 +1607,174 @@ function draw(){
   });
 }
 draw();
+
+/* ---------------- agents on the board, your AIs, and the right-click menu ---------------- */
+let AG = [];
+const SW = {XS:"tiny", S:"small", M:"medium", L:"large", XL:"huge"};
+function estFor(alias, size){
+  const m = (D.models||{})[alias], z = (D.sizes||{})[size||"M"];
+  if (!m || !z) return null;
+  const [pin, pout] = m.price, c = (D.cache||{})[alias] || [pin*0.1, pin*2.0];
+  return (z.in*pin + z.out*pout + z.cache_read*c[0] + z.cache_write*c[1]) / 1e6;
+}
+const myAIs = () => Object.entries(D.models||{}).filter(([k,m]) => ((D.providers||{})[m.provider]||{}).mine);
+function agentsOn(pname, sid){
+  return AG.filter(a => a.project===pname && a.story_id===sid)
+           .sort((x,y)=>(y.started||"").localeCompare(x.started||""));
+}
+function agentHtml(a){
+  const live = a.status==="running" || a.status==="starting";
+  if (live) return `<div class="agent run"><span class="dot"></span> <b>${esc(a.alias)}</b> is working ·
+     ${money2(a.cost_usd||0)} of ${money2(a.budget)} · ${a.steps||0} steps
+     <button class="mini astop" data-id="${esc(a.id)}">stop</button>
+     <div class="last">${esc(a.doing||"starting…")}</div></div>`;
+  if (a.status==="idle") return `<div class="agent ok">✓ <b>${esc(a.alias)}</b> finished · ${money2(a.cost_usd||0)}
+     <button class="mini aclear" data-id="${esc(a.id)}">clear</button>
+     <div class="last">${esc((a.last||"").slice(0,220))}</div></div>`;
+  return `<div class="agent bad">✕ <b>${esc(a.alias)}</b> ${esc(a.status)} · ${money2(a.cost_usd||0)}
+     <button class="mini aclear" data-id="${esc(a.id)}">clear</button><div class="last">${esc(a.why||"")}</div></div>`;
+}
+function paintAgents(){
+  document.querySelectorAll(".aslot").forEach(el => {
+    if (el.dataset.form) return;
+    const a = agentsOn(el.dataset.p, +el.dataset.sid)[0];
+    el.innerHTML = a ? agentHtml(a)
+      : (el.dataset.can==="1" ? `<button class="mini astart">▶ start agent</button>` : "");
+  });
+}
+function storyOf(el){ try { return JSON.parse(el.closest(".story").dataset.story); } catch(e){ return null; } }
+function startForm(slot){
+  const s = storyOf(slot); if (!s) return;
+  const mine = myAIs();
+  const pick = mine.some(([k])=>k===s.alias) ? s.alias : (mine[0]||[""])[0];
+  slot.dataset.form = "1";
+  slot.innerHTML = `<div class="astartf">
+    <div>An agent takes <b>#${s.id}</b> as <b>@${esc(s.who||"?")}</b>, reads its brief and the board, does it and closes it
+      with the evidence.</div>
+    <label>AI <select class="aai">${mine.map(([k,m])=>`<option value="${esc(k)}"${k===pick?" selected":""}${m.runs_here?"":" disabled"}>${esc(k)}${m.runs_here?"":" (not set up here)"}</option>`).join("")}</select>
+      <span class="aest"></span></label>
+    <label>Stop it at <input class="abud" type="number" min="0.01" max="50" step="0.05" value="${D.agent_budget||2}"> dollars</label>
+    <div><button class="mini ago">Start</button> <button class="mini acancel">Cancel</button></div></div>`;
+  const sel = slot.querySelector(".aai"), est = slot.querySelector(".aest");
+  const show = () => { const v = estFor(sel.value, s.size); est.textContent = v==null ? "" : `about ${money2(v)} for a ${SW[s.size||"M"]} card`; };
+  sel.onchange = show; show();
+}
+let agLive = new Set();
+async function pollAgents(){
+  let list;
+  try { const r = await fetch("/api/agents", {cache:"no-store"}); if (!r.ok) return; list = await r.json(); }
+  catch(e){ return; }
+  AG = list;
+  const now = new Set(AG.filter(a=>a.status==="running"||a.status==="starting").map(a=>a.id));
+  const ended = [...agLive].some(id => !now.has(id));
+  agLive = now;
+  paintAgents();
+  if (ended) refresh();        // an agent finished: it may have moved its card
+}
+if (SERVED) { pollAgents(); setInterval(pollAgents, 3000); }
+const _drawBase = draw;
+draw = function(){ _drawBase(); paintAgents(); };
+
+async function agentCall(what, body){
+  const r = await fetch("/api/agent/" + what, {method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify(body)});
+  const t = await r.text();
+  let j = {}; try { j = JSON.parse(t); } catch(e) {}
+  if (!r.ok) { alert(t); return null; }
+  await pollAgents();
+  return j;
+}
+
+document.addEventListener("click", async e => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.classList.contains("aichip")) {
+    const P = D.providers||{}, k = b.dataset.ai;
+    const use = Object.keys(P).filter(n => n===k ? !P[n].mine : P[n].mine);
+    if (!use.length) { alert("Keep at least one AI."); return; }
+    api("/api/ais", {providers: use});
+  } else if (b.classList.contains("ibtn")) {
+    const t = document.querySelector(".aitable"); if (t) t.hidden = !t.hidden;
+  } else if (b.classList.contains("astart")) {
+    startForm(b.closest(".aslot"));
+  } else if (b.classList.contains("acancel")) {
+    const sl = b.closest(".aslot"); delete sl.dataset.form; paintAgents();
+  } else if (b.classList.contains("ago")) {
+    const sl = b.closest(".aslot"), s = storyOf(sl);
+    const model = sl.querySelector(".aai").value, budget = sl.querySelector(".abud").value;
+    b.disabled = true; b.textContent = "starting…";
+    delete sl.dataset.form;
+    await agentCall("start", {project: sl.dataset.p, story: s.id, model, budget});
+  } else if (b.classList.contains("astop")) {
+    await agentCall("stop", {id: b.dataset.id});
+  } else if (b.classList.contains("aclear")) {
+    await agentCall("clear", {id: b.dataset.id});
+  } else if (b.classList.contains("wsnext")) {
+    const dry = await agentCall("next", {project: cur.name, dry_run: true});
+    if (!dry) return;
+    const go = (dry.out||"").split("\n").filter(l => l.startsWith("would start"));
+    if (!go.length) { alert("Nothing to start:\n\n" + (dry.out||"")); return; }
+    if (confirm("Workshop will start:\n\n" + dry.out + "\n\nGo?")) {
+      const r = await agentCall("next", {project: cur.name}); if (r) refresh();
+    }
+  }
+});
+
+/* the right-click menu: every action on a card in one place */
+let CTX = null;
+function closeCtx(){ if (CTX) { CTX.remove(); CTX = null; } }
+document.addEventListener("click", e => { if (CTX && !e.target.closest(".ctx")) closeCtx(); }, true);
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeCtx(); });
+window.addEventListener("scroll", closeCtx, true);
+document.addEventListener("contextmenu", e => {
+  const card = e.target.closest(".story[data-story]");
+  if (!card) return;
+  e.preventDefault(); closeCtx();
+  const s = JSON.parse(card.dataset.story), pname = cur.name;
+  const ag = s.id ? agentsOn(pname, s.id)[0] : null;
+  const live = ag && (ag.status==="running"||ag.status==="starting");
+  const can = SERVED && s.id && (s.state==="open"||s.state==="wip");
+  const it = (cls, label, title) => `<button class="it ${cls}" title="${esc(title||"")}">${label}</button>`;
+  const states = [["backlog","Backlog"],["open","Ready"],["wip","Doing"],["check","Check"],["done","Done"]];
+  CTX = document.createElement("div"); CTX.className = "ctx";
+  CTX.innerHTML = `<div class="t">#${s.id||"?"} ${esc(s.text.slice(0,60))}</div>
+    ${!SERVED ? `<div class="row">Read-only: open the page through serve.py to change cards.</div>` : `
+    ${live ? it("c-stop","■ Stop its agent") : (can ? it("c-start","▶ Start an agent on it") : "")}
+    ${ag && !live ? it("c-clear","Clear its finished agent") : ""}
+    <hr>
+    <div class="row"><span>Move to</span>${states.map(([k,l])=>`<button class="c-move${s.state===k?" on":""}" data-to="${k}">${l}</button>`).join("")}</div>
+    <div class="row"><span>Priority</span>${[10,9,8,7,6,5,4,3,2,1].map(n=>`<button class="c-prio${(s.prio||5)===n?" on":""}" data-n="${n}">${n}</button>`).join("")}</div>
+    <div class="row"><span>Size</span>${["XS","S","M","L","XL"].map(z=>`<button class="c-size${s.size===z?" on":""}" data-z="${z}">${SW[z]}</button>`).join("")}</div>
+    <div class="row"><span>AI</span><button class="c-ai${!s.model?" on":""}" data-m="">Workshop picks</button>${myAIs().map(([k])=>`<button class="c-ai${s.model===k?" on":""}" data-m="${esc(k)}">${esc(k)}</button>`).join("")}</div>
+    <hr>
+    ${it("c-note","Add a note")}${it("c-edit","Edit the card")}${s.state!=="done"?it("c-hold", s.blocked?"Take it off hold":"Put it on hold"):""}`}
+    ${s.state!=="done"?it("c-brief","Copy the brief for a seat"):""}
+    ${s.real ? it("c-why","Why did it cost "+money2(s.real.spent)+"?") : ""}`;
+  document.body.appendChild(CTX);
+  const w = CTX.offsetWidth, h = CTX.offsetHeight;
+  CTX.style.left = Math.min(e.clientX, innerWidth - w - 8) + "px";
+  CTX.style.top = Math.min(e.clientY, innerHeight - h - 8) + "px";
+  const click = sel => card.querySelector(sel) && card.querySelector(sel).click();
+  CTX.onclick = async ev => {
+    const b = ev.target.closest("button"); if (!b) return;
+    const edit = body => api("/api/edit", {project: pname, line: s.line, ...body});
+    if (b.classList.contains("c-start")) { closeCtx(); const sl = card.querySelector(".aslot"); if (sl) { startForm(sl); sl.scrollIntoView({block:"nearest"}); } return; }
+    if (b.classList.contains("c-stop")) { closeCtx(); await agentCall("stop", {id: ag.id}); return; }
+    if (b.classList.contains("c-clear")) { closeCtx(); await agentCall("clear", {id: ag.id}); return; }
+    if (b.classList.contains("c-move")) {
+      let ev2 = "";
+      if (b.dataset.to === "done") { ev2 = prompt("What proves it is done? (the measurement)", s.evidence||""); if (!ev2) return; }
+      closeCtx(); api("/api/move", {project: pname, line: s.line, to: b.dataset.to, evidence: ev2}); return;
+    }
+    if (b.classList.contains("c-prio")) { closeCtx(); edit({prio: +b.dataset.n}); return; }
+    if (b.classList.contains("c-size")) { closeCtx(); edit({text: s.text.replace(/\s*~(XS|S|M|L|XL)\b/g, "") + " ~" + b.dataset.z}); return; }
+    if (b.classList.contains("c-ai")) { closeCtx(); edit({model: b.dataset.m}); return; }
+    if (b.classList.contains("c-note")) { closeCtx(); click("button.note"); return; }
+    if (b.classList.contains("c-edit")) { closeCtx(); click("button.edit"); return; }
+    if (b.classList.contains("c-hold")) { closeCtx(); click("button.block"); return; }
+    if (b.classList.contains("c-brief")) { closeCtx(); click("button.copy"); return; }
+    if (b.classList.contains("c-why")) { closeCtx(); alert(`#${s.id}: cost ${money2(s.real.spent)}, estimated ${money2(s.real.estimate)} — ${s.real.verdict}\n\n` + s.real.why.map(w=>"• "+w).join("\n")); }
+  };
+});
 </script></body></html>
 """
 sys.stdout.write(HTML.replace("__DATA__", blob.replace("</", "<\\/")))
