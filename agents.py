@@ -550,7 +550,10 @@ def autopilot_tick():
                 cfg = autopilot_cfg(); cfg[name]["_said_spent"] = datetime.now().strftime("%Y-%m-%d")
                 save_autopilot(cfg)
             continue
-        per = min(models_cfg(pdir).get("agents", {}).get("default_budget_usd", 2.0), left)
+        # what is left of today's budget is shared by the agents this round starts, so together
+        # they cannot spend more than the day allows (each got all of it at first: measured 2x $0.47)
+        n = sum(1 for _, _, _, no in dispatch(str(pdir), dry_run=True) if not no) or 1
+        per = min(models_cfg(pdir).get("agents", {}).get("default_budget_usd", 2.0), left / n)
         out = io.StringIO()
         with contextlib.redirect_stdout(out):
             plan = dispatch(str(pdir), budget=round(per, 2))
