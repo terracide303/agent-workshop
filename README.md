@@ -33,9 +33,12 @@ computer or several, and what your first project is — then creates it, puts tw
 cards on its board, and prints the single line you paste into an agent session to
 begin.
 
-**You need:** `git`, `python3` (any version — `board.py` is pure standard
-library), and a coding agent such as Claude Code. `gh` is optional; without it
-your projects are local git only.
+**You need:** `git`, `python3` 3.8 or newer (`board.py` is pure standard
+library), and Claude Code to run the seats. `gh` is optional; without it your
+projects are local git only. **`start.sh` checks all of this first** — macOS,
+Linux, WSL or Windows (Git Bash) — and prints the install line for *your* system
+(brew, apt, dnf, pacman, zypper, apk or winget) for anything missing.
+`./start.sh --check` runs only that check.
 
 **Clone it into a folder called `workshop`.** The name matters, because projects
 sit *beside* it and every seat's start line uses `../workshop/`:
@@ -97,6 +100,39 @@ exactly the kind of thing to hand to `@workshop`.
 
 These are measurements from one real workshop, not a benchmark against other
 ways of working.
+
+## Which AI does the work — and what it costs
+
+**`@workshop` picks the AI for every story, starts the seats, and watches them.**
+A rename does not need the most expensive model; a design decision should not go to
+the cheapest. So every story carries a size and a model:
+
+```
+### Split the bill {refined} !8
+- [ ] #3 Split the bill among people ~M — `tip.py 40 15 --split 3` prints 15.33 @design #ds-flash
+```
+
+- **`models.json`** lists the AIs you can use — Claude, and DeepSeek if you have a key —
+  with their prices, and a routing table from *kind of task* to the cheapest model
+  that does it well. You edit it; it is a starting guess that the retrospective
+  corrects from measurements.
+- **Every seat runs inside Claude Code**, whichever AI is behind it. A DeepSeek seat is
+  Claude Code pointed at DeepSeek's Anthropic-compatible endpoint, so it has the same
+  tools, skills and briefs. Set `DEEPSEEK_API_KEY` in your environment to enable it.
+- **`agents.py`** is `@workshop`'s control panel: `start` a seat on a story, `list` and
+  `tail` what runs, `send` a correction into the same session, `stop` it, `clear` it.
+  Every agent has a budget and is stopped when it goes over.
+- **`agents.py cost <project>`** prices the work left, per phase and feature: with the
+  planned models, all on Opus, and what has been spent. **`agents.py ais <project>`**
+  shows what it would cost with every other choice of AIs, and `--use` sets the
+  project's choice.
+- **`agents.py report`** is the evidence: cost and outcome per model and per kind, and
+  the measured cost per size against the estimate. A cheap model that fails twice is
+  not cheap; `$ per ok` is what decides.
+
+`@workshop` itself runs on the strongest model: routing is judging how hard a task is,
+and a weak model misjudges exactly the hard ones. Its sessions are short, so that costs
+little and saves on every story it routes.
 
 ## Talk to @workshop. Seriously.
 
@@ -240,6 +276,8 @@ first; `@build` may not re-open the design decision.
 | [`roles/`](roles/) | one brief per seat: what it owns, what it never does | your own, every session |
 | [`start.sh`](start.sh) | **the only file you run.** Sets up, and adds a project | first, and per project |
 | [`board.py`](board.py) | the board, as a command line | daily |
+| [`models.json`](models.json) | the AIs you can use, their prices, and which kind of task goes to which | when you add an AI, or a price changes |
+| [`agents.py`](agents.py) | `@workshop`'s control panel: start, watch, steer and stop the seats; price the work | `@workshop`, daily |
 | [`page.sh`](page.sh) | **the board as a web page**, optional — renders the plan files, stores nothing | when you want to see it all |
 | [`skills/`](skills/) | agent skills + `install_skills.sh` — **ships one example, delete it** | when a skill earns its place |
 | [`check.sh`](check.sh) | the mechanical checks — **a pattern to fill in, not a rule set** | before every commit |

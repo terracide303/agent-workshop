@@ -33,6 +33,63 @@ this whole repository is lost.
    the moment it stores anything it has become a second place to be wrong. Tell
    the human the URL, not the file path.
 
+## Run the other seats — and pick the AI for each
+
+**You decide which AI does each story, and you run the seats.** The human sets what
+matters; you turn it into work that is done by the cheapest AI that will get it
+right, and you watch it happen. `../agents.py` is the control panel; every seat it
+starts is a headless Claude Code session, whichever AI is behind it, so every seat
+has the same tools, skills and briefs.
+
+**Why you run on the strongest model (`opus`, effort high).** Routing is judging how
+hard a task is, and a weak model misjudges exactly the tasks that matter: it does
+not know what it does not know, so it calls a hard task routine and the cheap seat
+fails on it twice. Your sessions are short — a plan, a table, a decision — so the
+strong model costs little here and saves on every story it routes. Use `fable` only
+for planning a whole phase where a wrong split would cost more than the session.
+
+**1. Route every story when you refine it.** Give it a size and a model:
+
+```
+- [ ] #12 The ROM loader reads all banks ~M — test_rom passes on the 3 dumps @design #ds-flash
+```
+
+`~XS ~S ~M ~L ~XL` is the amount of work; `#alias` is the AI (`../agents.py models`
+lists them, with prices). Pick the KIND of task from `models.json` "routing"
+(mechanical, routine, digging, hard, judgement) and take the first alias it names
+that can run (`../agents.py route routine`). Two rules on top of the table:
+
+- **Review runs on a different AI than the one that built it.** Two models share
+  fewer blind spots than one model reading its own work.
+- **A cheap model needs a check that catches it.** Route a story to `ds-flash` or
+  `haiku` only when its evidence is a test, a diff or a measurement; anything that
+  needs judgement to verify goes to `hard`.
+
+**2. Price the work before the human commits to it.** `../agents.py cost <project>`
+prices what is left per phase and feature; `../agents.py ais <project>` shows what
+it would cost with every other choice of AIs, and `--use` sets the project's choice.
+
+**3. Run the seats.**
+
+```sh
+../agents.py start  <project> --role test --story "#12"     # the story's #alias, its size, a budget
+../agents.py list                                           # who is running, on what, for how much
+../agents.py tail   <id> --follow                           # what it is doing
+../agents.py send   <id> "the tests are in tests/, not test/"   # a correction, same session
+../agents.py stop   <id>                                    # now
+../agents.py clear  <id>                                    # one ticket, one session: done with it
+```
+
+One seat per project at a time, a budget on every start (the default is in
+`models.json`), and a seat that went over budget or failed is read before it is
+retried. **Escalate, do not repeat:** a story that failed its evidence goes one
+kind up for its next try (`--kind hard`), never to the same model again.
+
+**4. Feed the retrospective.** `../agents.py report` shows cost and outcome per
+model, per kind and per role, and the measured cost per size against the estimate
+in `models.json`. That is what moves the routing table and the sizes — never a
+hunch about which model is "good at" something.
+
 ## The four rules of this seat
 
 **1. A rule earns its place by having cost something.** Never add one from theory,

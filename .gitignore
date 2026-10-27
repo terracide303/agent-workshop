@@ -14,3 +14,9 @@ index.html
 # narrower "dashboard/workshop.json.tmp" let two of them reach GitHub (2026-09-26).
 *.json.tmp
 *.html.tmp
+
+# agents.py: one machine's running agents, their logs and the cost ledger -- never shared
+.agents/
+
+# Python bytecode (agents.py loads board.py as a module)
+__pycache__/

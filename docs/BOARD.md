@@ -12,8 +12,8 @@ is refused.
 
 ```
 ## Phase 1 — a phase, in plain words
-### A feature, in plain words {refined}
-- [ ] #3 The story — the evidence that closes it @design +test !7 #sonnet
+### A feature, in plain words {refined} !8
+- [ ] #3 The story ~M — the evidence that closes it @design +test !7 #sonnet
 ```
 
 | | |
@@ -24,7 +24,13 @@ is refused.
 | `@design` | the one owner |
 | `+test` | a **checker** — see below |
 | `!7` | priority, 1–10 |
-| `#sonnet` | overrides that role's default model |
+| `#sonnet` | the AI it runs on, an alias from `models.json`; without it, the role's default in `roles.json` |
+| `~M` | its size: `~XS ~S ~M ~L ~XL`, anywhere on the line. `agents.py cost` turns sizes into money |
+
+A feature heading carries its own priority: `### The ROM path {refined} !8`. It ranks the
+features against each other, so `next` hands out stories from the most important feature
+first, and a story's own `!N` ranks it inside its feature. Set it with
+`board.py feature <project> "The ROM path" --prio 8`.
 
 ## `{refined}` — the one that will catch you out
 

@@ -32,6 +32,101 @@ echo "  agent-workshop"
 echo "  ─────────────────────────────────────────────────────────────"
 echo
 
+# ── what this computer is, and whether it has what the board needs ─────────────
+# Runs every time (it takes a moment) and stops before anything is written when a
+# required tool is missing, with the install line for THIS system: the same
+# missing python3 is `brew install` on a Mac, `apt install` on Ubuntu, `winget`
+# on Windows. `./start.sh --check` runs only this.
+OS=unknown PM=""
+case "$(uname -s 2>/dev/null)" in
+    Darwin) OS=macos; command -v brew >/dev/null 2>&1 && PM=brew ;;
+    Linux)
+        if grep -qi microsoft /proc/version 2>/dev/null; then OS=wsl; else OS=linux; fi
+        for pm in apt-get dnf pacman zypper apk; do
+            command -v "$pm" >/dev/null 2>&1 && { PM=$pm; break; }
+        done ;;
+    MINGW*|MSYS*|CYGWIN*) OS=windows; command -v winget >/dev/null 2>&1 && PM=winget ;;
+esac
+
+install_hint() {  # install_hint <tool> -> the line that installs it here
+    case "$1:$PM" in
+        python3:brew)    echo "brew install python" ;;
+        python3:apt-get) echo "sudo apt-get install python3" ;;
+        python3:dnf)     echo "sudo dnf install python3" ;;
+        python3:pacman)  echo "sudo pacman -S python" ;;
+        python3:zypper)  echo "sudo zypper install python3" ;;
+        python3:apk)     echo "sudo apk add python3" ;;
+        python3:winget)  echo "winget install Python.Python.3.12   (then reopen Git Bash)" ;;
+        python3:*)       [ "$OS" = macos ] && echo "xcode-select --install   (or install Homebrew, then: brew install python)" \
+                                           || echo "install Python 3 from https://www.python.org/downloads/" ;;
+        git:brew)        echo "brew install git" ;;
+        git:apt-get)     echo "sudo apt-get install git" ;;
+        git:dnf)         echo "sudo dnf install git" ;;
+        git:pacman)      echo "sudo pacman -S git" ;;
+        git:zypper)      echo "sudo zypper install git" ;;
+        git:apk)         echo "sudo apk add git" ;;
+        git:winget)      echo "winget install Git.Git" ;;
+        git:*)           [ "$OS" = macos ] && echo "xcode-select --install" || echo "install git from https://git-scm.com/downloads" ;;
+        # the official lines, code.claude.com/docs/en/setup (checked 2026-10-27)
+        claude:brew)     echo "brew install --cask claude-code   (or: curl -fsSL https://claude.ai/install.sh | bash)" ;;
+        claude:winget)   echo "winget install Anthropic.ClaudeCode   (or in PowerShell: irm https://claude.ai/install.ps1 | iex)" ;;
+        claude:apk)      echo "apk add bash curl libgcc libstdc++ ripgrep, then: curl -fsSL https://claude.ai/install.sh | bash" ;;
+        claude:*)        [ "$OS" = windows ] && echo "in PowerShell: irm https://claude.ai/install.ps1 | iex" \
+                                             || echo "curl -fsSL https://claude.ai/install.sh | bash" ;;
+        gh:brew)         echo "brew install gh" ;;
+        gh:winget)       echo "winget install GitHub.cli" ;;
+        gh:*)            echo "see https://cli.github.com/ for your system" ;;
+    esac
+}
+
+preflight() {
+    local missing=0 py=""
+    echo "  This computer: $OS${PM:+ (installs with $PM)}"
+    for c in python3 python; do
+        if command -v "$c" >/dev/null 2>&1 && "$c" -c 'import sys; sys.exit(sys.version_info < (3, 8))' 2>/dev/null; then
+            py=$c; break
+        fi
+    done
+    if [ -n "$py" ]; then
+        echo "    ok       $py $("$py" -c 'import platform; print(platform.python_version())')   (the board, the page, agents.py)"
+        [ "$py" = python3 ] || echo "    note     only 'python' is on PATH; run the tools as: python board.py ..."
+    else
+        echo "    MISSING  python 3.8 or newer -- the board cannot run without it"
+        echo "             $(install_hint python3)"; missing=1
+    fi
+    if command -v git >/dev/null 2>&1; then
+        echo "    ok       git   (the board's history, and mail between machines)"
+    else
+        echo "    MISSING  git -- $(install_hint git)"; missing=1
+    fi
+    if command -v claude >/dev/null 2>&1; then
+        echo "    ok       claude   (Claude Code: every seat runs in it, whichever AI is behind it)"
+    else
+        echo "    later    claude (Claude Code) -- needed to run seats with agents.py, not for the board"
+        echo "             $(install_hint claude)"
+    fi
+    if command -v gh >/dev/null 2>&1; then
+        echo "    ok       gh   (optional: creates a GitHub repo per project)"
+    else
+        echo "    optional gh -- without it projects stay local git. $(install_hint gh)"
+    fi
+    case "$OS" in
+        windows) echo "    note     Windows: run this in Git Bash; skills install with .\\install_skills.ps1."
+                 echo "             WSL works too, and behaves exactly like Linux." ;;
+        wsl)     echo "    note     WSL: keep the workshop and projects inside the Linux file system"
+                 echo "             (~/...), not /mnt/c -- git and file watching are slow and flaky there." ;;
+        unknown) echo "    note     unknown system ($(uname -s 2>/dev/null)); carrying on, but untested here." ;;
+    esac
+    echo
+    return $missing
+}
+
+if ! preflight; then
+    echo "  Install what is MISSING above, then run ./start.sh again. Nothing was written."
+    exit 1
+fi
+[ "${1:-}" = "--check" ] && exit 0
+
 # ── things we only need once ──────────────────────────────────────────────────
 if [ ! -f "$CFG" ]; then
     echo "  First run. Three questions, then it is set up for good."
@@ -57,11 +152,23 @@ if [ ! -f "$CFG" ]; then
         echo "  (gh not installed, so projects stay local git only — that is fine)"
     fi
 
+    echo
+    echo "  Which AIs can the seats use? Claude (Claude Code) is always one. Every"
+    echo "  other AI also runs inside Claude Code, pointed at its own endpoint."
+    echo
+    PROVIDERS='"anthropic"'
+    case "$(ask '  Do you have a DeepSeek API key? (y/n)' n)" in
+        [Yy]*) PROVIDERS="$PROVIDERS, \"deepseek\""
+               echo "    ok — put it in DEEPSEEK_API_KEY in your shell profile; agents.py models checks it" ;;
+    esac
+    echo "  (models.json lists the AIs, their prices, and which kind of task goes where)"
+
     cat > "$CFG" <<EOF
 {
   "human": "$HUMAN",
   "machines": "$MACHINES",
   "use_gh": "$USEGH",
+  "providers": [$PROVIDERS],
   "configured": "$TODAY"
 }
 EOF
@@ -173,13 +280,15 @@ cat > docs/PLAN.md <<EOF
 **Phase → Feature → Story. A story closes on evidence, never on opinion.**
 
 \`\`\`
-### A feature, in plain words {refined}
-- [ ] The story — what closes it @role #model
+### A feature, in plain words {refined} !5
+- [ ] The story ~M — what closes it @role #model
 \`\`\`
 
-\`@role\` assigns it (see \`../workshop/roles.json\`), \`#model\` overrides that
-role's default model, and everything after the dash is the evidence required to
-tick the box. **Unticked and unevidenced are the same thing.** Full reference:
+\`@role\` assigns it (see \`../workshop/roles.json\`), \`#model\` is the AI it runs
+on (\`../workshop/agents.py models\`; without it, the role's default), \`~M\` its
+size (XS S M L XL), \`!5\` on a feature ranks it against the others, and
+everything after the dash is the evidence required to tick the box.
+\`../workshop/agents.py cost $NAME\` prices what is left. **Unticked and unevidenced are the same thing.** Full reference:
 \`../workshop/docs/BOARD.md\`.
 
 **Every phase ends with a retrospective, and so does every two weeks of work.**

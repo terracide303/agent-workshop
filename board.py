@@ -28,7 +28,7 @@ Board edits are not committed: make the change, then commit it with the finding.
 Mail is the exception -- git is the only route to the other machine, so msg
 commits and pushes, and fails loudly when it cannot.
 """
-import argparse, json, re, sys
+import argparse, json, os, re, sys
 from pathlib import Path
 
 # Plan documents use em-dashes and arrows. A Windows console is cp1252 by
@@ -90,10 +90,25 @@ def split_block(body):
 
 
 FEATURE_MARK = "{refined}"
+# A feature's priority, 1..10, ten highest: `### The ROM path {refined} !8`. It ranks the features
+# against each other (next picks from the highest first); a story's own !N ranks it inside its feature.
+FEATURE_PRIO = re.compile(r"\s!(10|[1-9])(?![\w])")
+# A story's size, the amount of work: `~XS ~S ~M ~L ~XL`, written in the story text. It is what
+# agents.py cost turns into money with models.json's sizes and prices.
+SIZE = re.compile(r"(?<![\w/~])~(XS|S|M|L|XL)(?![\w])")
 
 
 def feature_name(heading):
-    return heading.replace(FEATURE_MARK, "").strip()
+    return FEATURE_PRIO.sub("", heading.replace(FEATURE_MARK, "")).strip()
+
+
+def feature_prio(heading):
+    m = FEATURE_PRIO.search(heading)
+    return int(m.group(1)) if m else 5
+
+
+def feature_heading(name, is_refined, prio):
+    return f"### {name}" + (f" {FEATURE_MARK}" if is_refined else "") + (f" !{prio}" if int(prio) != 5 else "")
 
 
 def feature_refined(heading):
@@ -109,7 +124,7 @@ def feature_refined(heading):
 def plan_path(project):
     p = Path(project)
     if not p.is_dir():
-        p = Path(__file__).resolve().parent.parent / project
+        p = Path(os.path.abspath(__file__)).parent.parent / project   # a symlinked workshop keeps its siblings
     if not p.is_dir():
         sys.exit(f"FAIL  no such project: {project}")
     for c in CANDIDATES:
@@ -173,13 +188,14 @@ NOTE = re.compile(r"^(\s+)[-*]\s+(\d{4}-\d{2}-\d{2})\s+@([\w-]+):\s*(.+)$")
 def load(project):
     path = plan_path(project)
     lines = path.read_text(encoding="utf-8").split("\n")
-    out, phase, feature, feat_ok = [], "", "", False
+    out, phase, feature, feat_ok, feat_prio = [], "", "", False, 5
     for i, line in enumerate(lines):
         if line.startswith("## "):
-            phase, feature, feat_ok = line[3:].strip(), "", False
+            phase, feature, feat_ok, feat_prio = line[3:].strip(), "", False, 5
         elif line.startswith("### "):
             feature = feature_name(line[4:])
             feat_ok = feature_refined(line)
+            feat_prio = feature_prio(line[4:])
         m = STORY.match(line)
         if m and phase:
             text, ev, who, model, prio, blocked, checker, tid = split_story(m.group(3))
@@ -192,7 +208,8 @@ def load(project):
                     break
                 notes.append({"i": j, "date": nm.group(2), "who": nm.group(3), "text": nm.group(4)})
             out.append({"i": i, "notes": notes, "indent": m.group(1), "mark": m.group(2).lower(),
-                        "feature_refined": feat_ok,
+                        "feature_refined": feat_ok, "feature_prio": feat_prio,
+                        "size": next((m.group(1) for m in (SIZE.search(text), SIZE.search(ev)) if m), ""),
                         "state": STATE.get(m.group(2).lower(), "open"),
                         "phase": phase, "feature": feature, "text": text,
                         "evidence": ev, "who": who, "model": model, "prio": prio,
@@ -380,7 +397,8 @@ def delete_story(project, line_text):
     _write_lines(path, lines)
 
 
-def set_feature(project, feature, is_refined):
+def set_feature(project, feature, is_refined, prio=None):
+    """is_refined None leaves the mark as it is (setting only the priority)."""
     path, lines, _ = load(project)
     hits = [i for i, l in enumerate(lines)
             if l.startswith("### ") and feature.lower() in feature_name(l[4:]).lower()]
@@ -388,7 +406,8 @@ def set_feature(project, feature, is_refined):
         raise BoardError(f"{len(hits)} feature headings match {feature!r}")
     i = hits[0]
     name = feature_name(lines[i][4:])
-    lines[i] = f"### {name} {FEATURE_MARK}" if is_refined else f"### {name}"
+    keep = feature_refined(lines[i]) if is_refined is None else is_refined
+    lines[i] = feature_heading(name, keep, feature_prio(lines[i][4:]) if prio is None else prio)
     _write_lines(path, lines)
     return lines[i]
 
@@ -461,7 +480,7 @@ def cmd_note(a):
     print(f"ok    {line.strip()}")
 
 
-SHOP = Path(__file__).resolve().parent
+SHOP = Path(os.path.abspath(__file__)).parent   # not resolve(): a symlinked workshop keeps its siblings
 SESSIONS = SHOP / ".sessions"
 INBOX = SHOP / ".inbox"
 
@@ -881,7 +900,7 @@ def _next_body(a, stories):
         print(f"TO CHECK     !{s['prio']} {s['text']}")
         print(f"             confirm: {s['evidence']}")
     ready = sorted([s for s in mine if s["state"] == "open" and not s["blocked"]
-                    and s["feature_refined"]], key=lambda s: -s["prio"])
+                    and s["feature_refined"]], key=lambda s: (-s["feature_prio"], -s["prio"]))
     if not ready:
         held = [s for s in mine if s["blocked"]]
         unref = [s for s in mine if s["state"] == "open" and not s["feature_refined"]]
@@ -1009,7 +1028,8 @@ def cmd_block(a, reason):
 
 def cmd_feature(a):
     try:
-        line = set_feature(a.project, a.feature, not a.unrefine)
+        line = set_feature(a.project, a.feature,
+                           None if (a.prio and not a.unrefine and not a.refine) else not a.unrefine, a.prio)
     except BoardError as e:
         sys.exit(f"FAIL  {e}")
     print(f"ok    {line}")
@@ -1116,6 +1136,10 @@ p.set_defaults(fn=lambda a: cmd_block(a, ""))
 p = sub.add_parser("feature"); p.add_argument("project"); p.add_argument("feature")
 p.add_argument("--unrefine", action="store_true",
                help="take the refined mark off again")
+p.add_argument("--refine", action="store_true",
+               help="with --prio: also mark it refined (without --prio, marking it is the default)")
+p.add_argument("--prio", type=int, choices=range(1, 11), metavar="1-10",
+               help="the feature's priority; alone, it leaves the refined mark as it is")
 p.set_defaults(fn=cmd_feature)
 
 p = sub.add_parser("edit"); p.add_argument("project"); p.add_argument("match")

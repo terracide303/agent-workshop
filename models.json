@@ -1,0 +1,77 @@
+{
+ "_comment": "Which AIs can do the work, what each costs, and which one a kind of task goes to. @workshop reads this to route a story (#alias on the story) and agents.py reads it to start the agent. ONE COPY: prices live here and nowhere else. A project may override it with docs/models.json. Prices are USD per million tokens, input / output (cache: read / write, when it differs from Anthropic's 0.1x / 2x of input -- Claude Code writes the 1-hour cache), checked 2026-10-27 (Anthropic: the API price list; DeepSeek: api-docs.deepseek.com/quick_start/pricing, off-peak, peak is double). Update them when they change, and say so in the commit.",
+
+ "providers": {
+  "anthropic": {
+   "name": "Claude (Anthropic)",
+   "how": "Claude Code as you are logged in. Nothing else to set.",
+   "env": {}
+  },
+  "deepseek": {
+   "name": "DeepSeek",
+   "how": "Runs INSIDE Claude Code (same tools, skills, CLAUDE.md), pointed at DeepSeek's Anthropic-compatible endpoint. Needs your DeepSeek API key in the environment variable named by key_env.",
+   "key_env": "DEEPSEEK_API_KEY",
+   "env": {
+    "ANTHROPIC_BASE_URL": "https://api.deepseek.com/anthropic",
+    "ANTHROPIC_AUTH_TOKEN": "${key}",
+    "ANTHROPIC_MODEL": "${model}",
+    "ANTHROPIC_DEFAULT_OPUS_MODEL": "${model}",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "${model}",
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "${model}",
+    "CLAUDE_CODE_SUBAGENT_MODEL": "${model}"
+   },
+   "unset": ["ANTHROPIC_API_KEY"]
+  }
+ },
+
+ "models": {
+  "fable":     {"provider": "anthropic", "model": "claude-fable-5-1",  "effort": "high",   "price": [10.00, 50.00], "tier": 5,
+                "good_for": "the hardest reasoning: a whole phase's plan, a design nobody can agree on. Rarely worth it for one ticket."},
+  "opus":      {"provider": "anthropic", "model": "claude-opus-5-5",   "effort": "high",   "price": [4.00, 20.00],  "tier": 4,
+                "good_for": "deciding: design, debugging an unknown cause, review, routing. The default for judgement."},
+  "opus-low":  {"provider": "anthropic", "model": "claude-opus-5-5",   "effort": "low",    "price": [4.00, 20.00],  "tier": 3,
+                "good_for": "a strong model on a short leash: reading and summarising, small judged edits. Often cheaper per finished task than a weaker model that needs two tries."},
+  "sonnet":    {"provider": "anthropic", "model": "claude-sonnet-5-5", "effort": "medium", "price": [2.00, 10.00],  "tier": 3,
+                "good_for": "everyday building: a well-specified change with its tests, following a pattern the repo already has."},
+  "haiku":     {"provider": "anthropic", "model": "claude-haiku-5-5",  "effort": "low",    "price": [0.10, 0.50],   "tier": 1,
+                "good_for": "mechanical work with a fixed recipe: rename, reformat, run a script and report what it printed."},
+  "ds-pro":    {"provider": "deepseek",  "model": "deepseek-v4-pro",   "effort": "max",    "price": [0.66, 1.98], "cache": [0.022, 0.66], "tier": 3,
+                "good_for": "long, patient digging when the answer can be checked: reverse engineering, porting with a test to compare against. No images."},
+  "ds-flash":  {"provider": "deepseek",  "model": "deepseek-flash[1m]", "effort": "high",  "price": [0.15, 0.60], "cache": [0.003, 0.15], "tier": 2,
+                "good_for": "routine building and searching at a fraction of the price, where a test or a diff will catch a mistake."},
+  "ds-flash-low": {"provider": "deepseek", "model": "deepseek-flash",  "effort": "low",    "price": [0.15, 0.60], "cache": [0.003, 0.15], "tier": 1,
+                "good_for": "the cheapest seat there is: mechanical edits, collecting facts, reformatting, first drafts someone else checks."}
+ },
+
+ "routing": {
+  "_comment": "Kinds of task, cheapest acceptable first. @workshop names the kind; the first alias whose provider you have is used. A story's own #alias always wins. These are STARTING GUESSES: the retrospective moves a kind up or down from agents.py report, never from theory.",
+  "mechanical": {"what": "a fixed recipe, nothing to decide: rename, reformat, move, run a script and report, fill a table from known facts",
+                 "use": ["ds-flash-low", "haiku", "sonnet"]},
+  "routine":    {"what": "a well-specified change with a check that catches mistakes; the repo already has the pattern",
+                 "use": ["ds-flash", "sonnet", "opus-low"]},
+  "digging":    {"what": "long patient work whose result can be checked: reverse engineering, porting against a reference, searching many files",
+                 "use": ["ds-pro", "ds-flash", "opus"]},
+  "hard":       {"what": "deciding: a design choice, a bug whose cause is unknown, anything where a wrong answer looks right",
+                 "use": ["opus", "fable"]},
+  "judgement":  {"what": "review, retrospective, routing and planning: judging someone else's work or deciding who does what",
+                 "use": ["opus", "fable"]}
+ },
+
+ "sizes": {
+  "_comment": "What one story of each size (~XS .. ~XL in its text) uses, in tokens over its whole session. Most of an agent's tokens are cache READS: every step re-reads the conversation. STARTING GUESSES, scaled from one measured 1-step task (31k read, 12k write, 330 out): agents.py report prints the measured median per size next to these, and the retrospective replaces them. An unsized story counts as M and is flagged.",
+  "XS": {"what": "one step: a rename, a lookup",                 "cache_read":   150000, "cache_write":   30000, "in": 2000,  "out":   2000},
+  "S":  {"what": "a few files, one check",                        "cache_read":   600000, "cache_write":   60000, "in": 5000,  "out":   8000},
+  "M":  {"what": "a feature's worth of edits with its tests",     "cache_read":  2500000, "cache_write":  200000, "in": 15000, "out":  30000},
+  "L":  {"what": "many files, several rounds of test and fix",    "cache_read":  8000000, "cache_write":  500000, "in": 40000, "out":  90000},
+  "XL": {"what": "a session's limit: split it if you can",         "cache_read": 20000000, "cache_write": 1200000, "in": 90000, "out": 250000}
+ },
+
+ "escalate": "A story that fails its evidence on a model goes one kind up (mechanical -> routine -> hard) for the next try, not the same model again. agents.py report shows where that happens; the retrospective moves the routing table.",
+
+ "agents": {
+  "_comment": "How agents.py runs a seat unattended. A headless agent cannot ask for permission, so what it may do is decided here. acceptEdits lets it edit files in the project; allowed_tools adds what it may run without asking. Tighten this for a project you do not trust an agent with.",
+  "permission_mode": "acceptEdits",
+  "allowed_tools": ["Bash", "Read", "Edit", "Write", "Glob", "Grep"],
+  "default_budget_usd": 2.00
+ }
+}
