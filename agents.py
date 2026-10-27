@@ -339,6 +339,16 @@ def supervise(aid, prompt, resume):
     if meta["status"] == "running":     # ended without a result event
         meta.update(status="failed", why=f"claude exited {rc} without a result; see tail")
     meta["pid"] = meta["child"] = None
+    # One agent per card: when its card is closed (done, or handed to its checker) the agent is
+    # cleared, and the next card gets a new one with that card's own AI. A card that is NOT closed
+    # keeps its agent, so the human can still send it the missing piece.
+    if meta["status"] == "idle" and meta.get("story_id"):
+        try:
+            st = next((x for x in load_board(meta["project_dir"]) if x["id"] == meta["story_id"]), None)
+        except (Exception, SystemExit):
+            st = None
+        if st and st["state"] in ("done", "check"):
+            meta.update(status="cleared", why=f"card #{meta['story_id']} is {st['state']}: agent cleared")
     save(meta)
     if meta["status"] != "idle":
         ledger(meta)

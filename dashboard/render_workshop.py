@@ -865,7 +865,13 @@ function agents(){
   const SES = D.sessions || {};
   const GIT = D.git_seen || {};
   const seen = (m) => m < 15 ? "active" : m < 120 ? `quiet ${m}m` : m < 1440 ? `last seen ${Math.floor(m/60)}h ago` : "gone quiet";
-  return `<div class="card"><h3>Who is working</h3>
+  return `<div class="card"><h3>Agents on cards, right now</h3>
+    <p class="lede">One agent per card, with <b>that card's AI</b>. When the card is done it is cleared,
+    and the next card gets a new agent with its own AI. Start one from a card (▶ or right-click), or let
+    Workshop start the next cards from the board.</p>
+    <div id="aglive"><p class="empty">${SERVED?"No agent is working.":"Open the page through ./page.sh to see the agents."}</p></div>
+  </div>
+  <div class="card"><h3>Who is working</h3>
     <table>${R.map(r=>{const s = SES[r.id];
       const g = GIT[r.id];
       const live = s && s.mins < 15;
@@ -902,16 +908,17 @@ function agents(){
     filters by owner, and hands you the brief.</p>
     <pre class="cmd">- [ ] Data matches game.pce over 256 fetches — 0 mismatches to close @build #sonnet</pre>
     <p class="muted" style="margin:0"><span class="mono">@role</span> assigns it ·
-    <span class="mono">#model</span> overrides the role's default model ·
+    <span class="mono">#model</span> is the AI for that card (without it, the role's default) ·
     unassigned stories fall to <b>design</b>.</p></div>
   ${R.map(r=>`<div class="card"><h3>@${esc(r.id)} — ${esc(r.name)}</h3>
     <table>
       <tr><td class="muted" style="width:110px">Machine</td><td>${esc(r.machine)}</td></tr>
       ${r.model === "" ? `<tr><td class="muted">Model</td><td class="muted">— human</td></tr>` :
-      `<tr><td class="muted">Model</td><td>
+      `<tr><td class="muted">Default AI</td><td>
         <select class="mdlsel" data-role="${esc(r.id)}">
-          ${Object.keys(M).map(k=>`<option value="${esc(k)}"${modelFor(r.id,"")===k?" selected":""}>${esc(k)} — ${esc(M[k])}</option>`).join("")}
+          ${Object.keys(D.models||M).map(k=>`<option value="${esc(k)}"${modelFor(r.id,"")===k?" selected":""}>${esc(k)}${D.models&&D.models[k]?` — $${D.models[k].price[0]} / $${D.models[k].price[1]} per M tokens`:` — ${esc(M[k]||"")}`}</option>`).join("")}
         </select>
+        <span class="muted" style="margin-left:6px">used when a card names no AI of its own</span>
         ${MODEL_OVERRIDE[r.id] && MODEL_OVERRIDE[r.id] !== r.model
           ? `<span class="tag mdl" style="margin-left:8px">changed here, default is ${esc(r.model)}</span>` : ""}
       </td></tr>`}
@@ -1646,7 +1653,23 @@ function agentHtml(a){
   return `<div class="agent bad">✕ <b>${esc(a.alias)}</b> ${esc(a.status)} · ${money2(a.cost_usd||0)}
      <button class="mini aclear" data-id="${esc(a.id)}">clear</button><div class="last">${esc(a.why||"")}</div></div>`;
 }
+function paintAgentList(){
+  const el = document.getElementById("aglive"); if (!el) return;
+  if (!AG.length) { el.innerHTML = `<p class="empty">No agent is working.</p>`; return; }
+  el.innerHTML = `<table>${AG.map(a => `<tr>
+      <td style="width:110px"><b>${esc(a.project)}</b></td>
+      <td style="width:70px" class="mono">${a.story_id?"#"+a.story_id:"—"}</td>
+      <td style="width:90px">@${esc(a.role)}</td>
+      <td style="width:110px"><span class="tag mdl">${esc(a.alias)}</span></td>
+      <td style="width:90px">${esc(a.status)}</td>
+      <td style="width:80px" class="mono">${money2(a.cost_usd||0)}</td>
+      <td class="muted">${esc((a.status==="running"||a.status==="starting") ? (a.doing||"starting…") : (a.why||a.last||"").slice(0,140))}</td>
+      <td style="width:70px">${(a.status==="running"||a.status==="starting")
+        ? `<button class="mini astop" data-id="${esc(a.id)}">stop</button>`
+        : `<button class="mini aclear" data-id="${esc(a.id)}">clear</button>`}</td></tr>`).join("")}</table>`;
+}
 function paintAgents(){
+  paintAgentList();
   document.querySelectorAll(".aslot").forEach(el => {
     if (el.dataset.form) return;
     const a = agentsOn(el.dataset.p, +el.dataset.sid)[0];
