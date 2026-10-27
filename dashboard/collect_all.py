@@ -88,7 +88,7 @@ def price_projects(projects):
     providers = {n: {"name": pr["name"], "how": pr.get("how", ""),
                      "mine": mine is None or n in mine,
                      "key_env": pr.get("key_env", ""),
-                     "key_ok": not pr.get("key_env") or bool(os.environ.get(pr["key_env"]))}
+                     "key_ok": not pr.get("key_env") or bool(A.api_key(pr["key_env"]))}
                  for n, pr in cfg0["providers"].items()}
     models = {k: {"model": m["model"], "provider": m["provider"], "price": m["price"], "tier": m["tier"],
                   "effort": m.get("effort", ""), "good_for": m.get("good_for", ""),

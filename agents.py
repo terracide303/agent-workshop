@@ -91,6 +91,25 @@ def project_ais(project_dir):
     return (load_json(Path(project_dir) / "docs" / "ais.json", {}) or {}).get("use")
 
 
+KEYS_FILE = Path(os.path.expanduser("~/.config/agent-workshop/keys.env"))
+
+
+def api_key(name):
+    """An AI's key: from the environment, or from ~/.config/agent-workshop/keys.env (NAME=value lines, readable by
+    the user only). The file keeps keys out of the chat, out of every repo, and works in a session that started
+    before the key was set."""
+    if os.environ.get(name):
+        return os.environ[name]
+    try:
+        for line in KEYS_FILE.read_text(encoding="utf-8").splitlines():
+            k, _, v = line.strip().partition("=")
+            if k.strip() == name and v.strip():
+                return v.strip().strip('"').strip("'")
+    except OSError:
+        pass
+    return ""
+
+
 def provider_ready(cfg, name, project_dir=None):
     """'' when the provider can run here, else why not."""
     p = cfg["providers"].get(name)
@@ -103,8 +122,8 @@ def provider_ready(cfg, name, project_dir=None):
     have = shop.get("providers")
     if have is not None and name not in have:
         return f"{p['name']} is not in workshop.json's providers (re-run ./start.sh to add it)"
-    if p.get("key_env") and not os.environ.get(p["key_env"]):
-        return f"{p['name']} needs {p['key_env']} set in the environment"
+    if p.get("key_env") and not api_key(p["key_env"]):
+        return f"{p['name']} needs {p['key_env']} (in the environment, or in {KEYS_FILE})"
     return ""
 
 
@@ -134,7 +153,7 @@ def environment(cfg, alias, base=None):
     env = dict(os.environ if base is None else base)
     for k in p.get("unset", []):
         env.pop(k, None)
-    key = env.get(p["key_env"], "") if p.get("key_env") else ""
+    key = (env.get(p["key_env"]) or (api_key(p["key_env"]) if base is None else "")) if p.get("key_env") else ""
     for k, v in p.get("env", {}).items():
         env[k] = v.replace("${key}", key).replace("${model}", m["model"])
     return env
@@ -1043,10 +1062,13 @@ def cmd_selftest(a):
     env = environment(cfg, "opus", base)
     check("a Claude seat is left on Anthropic", "ANTHROPIC_BASE_URL" not in env and env.get("ANTHROPIC_API_KEY") == "sk-real-anthropic")
     old = os.environ.pop("DEEPSEEK_API_KEY", None)
+    global KEYS_FILE
+    saved_keys, KEYS_FILE = KEYS_FILE, Path(tempfile.mkdtemp()) / "none.env"   # the user's real key file stays out of it
     try:
         check("a provider without its key is refused", "DEEPSEEK_API_KEY" in provider_ready(cfg, "deepseek"))
         check("routing skips a provider that cannot run", route(cfg, "mechanical")[0] == "haiku")
     finally:
+        KEYS_FILE = saved_keys
         if old is not None:
             os.environ["DEEPSEEK_API_KEY"] = old
     try:
