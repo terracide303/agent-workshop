@@ -77,6 +77,11 @@ main{flex:1;display:flex;flex-direction:column;overflow:hidden}
 #wsbtn{float:right;margin-right:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);
   border-radius:8px;padding:5px 10px;font:inherit;font-size:12.5px;cursor:pointer}
 #wsbtn:hover{border-color:var(--accent)}
+.wstab .talk{font:inherit;font-size:15px;font-weight:700;padding:10px 22px;border-radius:10px;border:0;
+  background:var(--accent);color:var(--bg);cursor:pointer;margin:6px 10px 6px 0}
+.wstab .talk:disabled{opacity:.6;cursor:wait}
+.wstab details.old{margin-top:14px} .wstab details summary{cursor:pointer;color:var(--muted)}
+.wserr{margin-top:10px;padding:10px 12px;border-radius:10px;border:1px solid var(--warn);background:var(--warn-bg)}
 .wspanel{position:fixed;z-index:40;right:18px;top:64px;width:min(440px,calc(100vw - 36px));padding:14px;
   border-radius:12px;border:1px solid var(--line);background:var(--bg);box-shadow:0 10px 30px rgba(0,0,0,.45);font-size:12.5px}
 .wspanel h4{margin:0 0 6px}.wspanel p{margin:6px 0;color:var(--muted)}
@@ -354,7 +359,7 @@ kbd{background:var(--sunk);border:1px solid var(--line);border-radius:4px;paddin
   </aside>
   <main>
     <div class="head">
-      <h2 id="title"></h2><button id="refreshbtn" title="refresh">⟳</button><button id="wsbtn" title="talk to Workshop from this browser or your phone">💬 Talk to Workshop</button><p id="sub"></p>
+      <h2 id="title"></h2><button id="refreshbtn" title="refresh">⟳</button><p id="sub"></p>
       <nav id="tabs"></nav>
     </div>
     <div class="body" id="view"></div>
@@ -432,7 +437,7 @@ function modelFor(roleId, storyModel){
   const r = role(roleId); return r ? r.model : "";
 }
 const PTABS = ["Overview","Board","Progress","Builds","Rules","Messages","Ideas","Log"];
-const WTABS = {Status:"status", Usage:"usage", Agents:"agents", Rules:"rules", Skills:"skills", "How to":"howto", "New project":"new"};
+const WTABS = {Status:"status", Workshop:"workshop", Usage:"usage", Agents:"agents", Rules:"rules", Skills:"skills", "How to":"howto", "New project":"new"};
 
 /* ---------------- sidebar ---------------- */
 const plist = document.getElementById("plist");
@@ -1418,7 +1423,7 @@ function draw(){
         "New project":"Scaffold a new core port"}[curTab] || "")
     : (cur.subtitle || "");
   const v = document.getElementById("view"); v.scrollTop = 0;
-  v.innerHTML = isW ? ({Status:status, Usage:usage, Rules:rules, Agents:agents, Skills:skills, "How to":howto, "New project":newproj}[curTab])()
+  v.innerHTML = isW ? ({Status:status, Workshop:workshopTab, Usage:usage, Rules:rules, Agents:agents, Skills:skills, "How to":howto, "New project":newproj}[curTab])()
     : ({Overview:overview, Board:board, Progress:progress, Builds:builds, Rules:projrules,
         Messages:messages, Ideas:ideas, Log:log}[curTab])(cur);
 
@@ -1754,49 +1759,65 @@ document.addEventListener("click", async e => {
   }
 });
 
-/* Talk to Workshop: Claude Code's Remote Control, optional -- the old way stays right next to it */
-let WSP = null;
-function wsClose(){ if (WSP) { WSP.remove(); WSP = null; } }
-async function wsPanel(){
-  wsClose();
-  WSP = document.createElement("div"); WSP.className = "wspanel";
-  const startLine = `You are @workshop. Run \`git pull\` in ../workshop first, then read ../workshop/roles/workshop.md, then run ../workshop/board.py inbox --who workshop and ../workshop/agents.py list, and do what it says.`;
-  const old = `<div class="old"><b>Or the old way</b><p>Paste this into any Claude Code session (any folder beside the workshop):</p>
-    <pre>${esc(startLine)}</pre><div class="acts"><button class="wscopy">Copy the line</button></div></div>`;
-  if (!SERVED) {
-    WSP.innerHTML = `<h4>Talk to Workshop</h4><p>Open this page through <span class="mono">./page.sh</span> to start
-      Workshop for the browser from here.</p>${old}<div class="acts"><button class="wsx">Close</button></div>`;
-  } else {
-    let st = {}; try { st = await (await fetch("/api/workshop", {cache:"no-store"})).json(); } catch(e) {}
-    WSP.innerHTML = `<h4>Talk to Workshop ${st.running ? "· <span style='color:var(--ok)'>running</span>" : ""}</h4>
-      <p>Workshop runs here on this computer, in Claude Code. You talk to it at <b>claude.ai/code</b> in any browser,
-      or in the Claude app on your phone. It picks the AI for every card and starts, watches and stops the agents
-      (those can run on DeepSeek too). It needs your claude.ai login and this computer switched on.</p>
-      <div class="acts">${st.running
-        ? `<button class="primary wsopen" data-url="${esc(st.url||"https://claude.ai/code")}">Open Workshop</button><button class="wsstop">Stop it</button>`
-        : `<button class="primary wsstart">Start Workshop for the browser</button>`}
-        <button class="wsx">Close</button></div>
-      ${st.running ? `<p>In claude.ai/code it is called <b>${esc(st.name||"Workshop")}</b> (started ${esc(st.started||"")}).</p>` : ""}
-      <div class="wsmsg"></div>${old}`;
-  }
-  document.body.appendChild(WSP);
+/* The Workshop tab: one button, Talk. Claude Code's Remote Control, optional -- the old way stays below it */
+const WS_LINE = `You are @workshop. Run \`git pull\` in ../workshop first, then read ../workshop/roles/workshop.md, then run ../workshop/board.py inbox --who workshop and ../workshop/agents.py list, and do what it says.`;
+function workshopTab(){
+  setTimeout(wsState, 0);
+  return `<div class="card wstab"><h3>Talk to Workshop</h3>
+    <p class="lede">Workshop is the seat that runs the others: it picks the AI for every card, starts the agents, watches
+    them and stops them. <b>Talk</b> opens it in a new browser tab on <span class="mono">claude.ai/code</span>; the same
+    session is in the Claude app on your phone.</p>
+    ${SERVED ? `<button class="talk">💬 Talk</button> <span id="wsstate" class="muted">checking…</span>`
+             : `<p class="muted">Open this page through <span class="mono">./page.sh</span> to use Talk.</p>`}
+    <div id="wsmsg"></div>
+    <details class="old"><summary>The old way: paste a line into Claude Code yourself</summary>
+      <p class="muted">Works everywhere, with or without Talk — any Claude Code session in a folder beside the workshop:</p>
+      <pre class="cmd">${esc(WS_LINE)}</pre><button class="mini wscopy">copy</button></details>
+    <p class="muted" style="margin-top:12px">Workshop runs on this computer, in Claude Code, on Claude (Remote Control
+    needs your claude.ai login). The agents it starts can run on any of your AIs, DeepSeek included. This computer has
+    to stay on while you talk to it.</p></div>`;
+}
+async function wsState(){
+  const el = document.getElementById("wsstate"); if (!el) return;
+  let st = {}; try { st = await (await fetch("/api/workshop", {cache:"no-store"})).json(); } catch(e) { el.textContent = ""; return; }
+  el.innerHTML = st.running
+    ? `running as <b>${esc(st.name||"Workshop")}</b> since ${esc(st.started||"")} · <a href="#" class="wsstop">stop it</a>`
+    : `not running — Talk starts it`;
 }
 document.addEventListener("click", async e => {
-  const b = e.target.closest("button"); if (!b) return;
-  if (b.id === "wsbtn") { WSP ? wsClose() : wsPanel(); return; }
-  if (!WSP || !WSP.contains(b)) return;
-  if (b.classList.contains("wsx")) { wsClose(); return; }
-  if (b.classList.contains("wscopy")) { navigator.clipboard.writeText(WSP.querySelector("pre").textContent); b.textContent = "Copied"; return; }
-  if (b.classList.contains("wsopen")) { window.open(b.dataset.url, "_blank"); return; }
-  if (b.classList.contains("wsstart") || b.classList.contains("wsstop")) {
-    const what = b.classList.contains("wsstart") ? "start" : "stop";
-    b.disabled = true; b.textContent = what === "start" ? "starting…" : "stopping…";
-    const r = await fetch("/api/workshop/" + what, {method:"POST", headers:{"Content-Type":"application/json"}, body:"{}"});
-    const j = await r.json().catch(() => ({}));
-    if (j.error) { await wsPanel(); WSP.querySelector(".wsmsg").innerHTML = `<pre>${esc(j.error)}</pre>`; return; }
-    await wsPanel();
-    if (what === "start" && j.running) window.open(j.url || "https://claude.ai/code", "_blank");
+  const t = e.target.closest("button, a.wsstop"); if (!t) return;
+  if (t.classList.contains("wscopy")) { navigator.clipboard.writeText(WS_LINE); t.textContent = "copied"; return; }
+  if (t.classList.contains("wsstop")) {
+    e.preventDefault();
+    await fetch("/api/workshop/stop", {method:"POST", headers:{"Content-Type":"application/json"}, body:"{}"});
+    wsState(); return;
   }
+  if (!t.classList.contains("talk")) return;
+  // open the tab inside the click, or the browser blocks it as a popup; point it once Workshop is up
+  const win = window.open("about:blank", "_blank");
+  const msg = document.getElementById("wsmsg");
+  t.disabled = true; t.textContent = "💬 starting Workshop…"; msg.innerHTML = "";
+  let st = {};
+  try {
+    st = await (await fetch("/api/workshop", {cache:"no-store"})).json();
+    if (!st.running) st = await (await fetch("/api/workshop/start",
+      {method:"POST", headers:{"Content-Type":"application/json"}, body:"{}"})).json();
+  } catch(err) { st = {error: String(err)}; }
+  t.disabled = false; t.textContent = "💬 Talk";
+  if (st.running) {
+    if (win) win.location = st.url || "https://claude.ai/code"; else window.open(st.url || "https://claude.ai/code", "_blank");
+    msg.innerHTML = `<p class="muted">Opened <span class="mono">claude.ai/code</span> in a new tab: pick the session
+      <b>${esc(st.name||"Workshop")}</b> there.</p>`;
+  } else {
+    if (win) win.close();
+    const trust = /trust/i.test(st.error||"");
+    msg.innerHTML = trust
+      ? `<div class="wserr"><b>One step first:</b> Claude Code has to trust the workshop folder once, and only a terminal
+          can say yes to that. In Terminal:<pre class="cmd">cd "${esc(D.root||"")}/workshop" && claude</pre>
+          press Enter at the trust question, type <span class="mono">/exit</span>, then press Talk again.</div>`
+      : `<div class="wserr"><b>Workshop did not start.</b><pre>${esc(st.error||"no answer from the page server")}</pre></div>`;
+  }
+  wsState();
 });
 
 /* the right-click menu: every action on a card in one place */
