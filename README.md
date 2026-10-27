@@ -1,8 +1,5 @@
 # agent-workshop
 
-[![Buy me a beer](https://img.shields.io/badge/Buy%20me%20a%20beer-%F0%9F%8D%BA-FFDD00?style=flat)](https://buymeacoffee.com/terracide)
-*This is free and always will be: no paywall, no catch. I build it in my spare time and don't earn a cent from it. If it saved you an evening or brought your gear back to life, a beer would honestly help me a lot to keep going.*
-
 **A way of working with coding agents that does not lose the thread.** Tickets
 live in a markdown file, every seat has one job and a list of things it must not
 do, and nothing closes without evidence.
