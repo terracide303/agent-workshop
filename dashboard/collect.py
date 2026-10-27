@@ -169,14 +169,15 @@ for line in plan_lines:
         board.append(phase); feature = None
     elif line.startswith("### ") and phase:
         raw = line[4:].strip()
-        feature = {"feature": raw.replace("{refined}", "").strip(),
-                   "refined": "{refined}" in raw, "stories": []}
+        fp = re.search(r"\s!(10|[1-9])(?![\w])", raw)      # the feature's priority, as board.py reads it
+        feature = {"feature": re.sub(r"\s!(10|[1-9])(?![\w])", "", raw.replace("{refined}", "")).strip(),
+                   "refined": "{refined}" in raw, "prio": int(fp.group(1)) if fp else 5, "stories": []}
         phase["features"].append(feature)
     else:
         m = re.match(r"^\s*[-*]\s*\[([ xX~?cC])\]\s*(.+)$", line)
         if m and phase:
             if feature is None:
-                feature = {"feature": "", "refined": False, "stories": []}
+                feature = {"feature": "", "refined": False, "prio": 5, "stories": []}
                 phase["features"].append(feature)
             body = m.group(2).strip()
             blocked = ""
@@ -188,6 +189,8 @@ for line in plan_lines:
             pri = re.search(r"(?<![\w/])!(10|[1-9])(?![\w])", body)
             tid = re.search(r"(?<![\w/])#(\d+)(?![\w])", body)
             chk = re.search(r"(?<![\w/])\+([a-z][\w-]*)", body)
+            size = re.search(r"(?<![\w/~])~(XS|S|M|L|XL)(?![\w])", body)   # the amount of work
+            body = re.sub(r"\s*(?<![\w/~])~(XS|S|M|L|XL)(?![\w])", "", body)
             body = re.sub(r"(?<![\w/])(?:[@#+][a-z][\w.-]*|![0-9]{1,2}(?![\w])|#\d+(?![\w]))", "", body).strip()
             parts = re.split(r"\s+[\u2014-]{1,2}\s+", body, maxsplit=1)
             mark = m.group(1).lower()
@@ -205,6 +208,7 @@ for line in plan_lines:
                 "notes": [],
                 "who": who.group(1) if who else "",
                 "model": mdl.group(1) if mdl else "",
+                "size": size.group(1) if size else "",
             })
 # Cancelled and Archive are kept even when empty: they are destinations, and a
 # destination that disappears when it is empty cannot be moved to.

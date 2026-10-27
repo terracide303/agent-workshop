@@ -31,6 +31,62 @@ for d in sorted((p for p in root.iterdir() if p.is_dir()),
         continue
     projects.append(json.loads(r.stdout))
 
+# --- the work left, in money: agents.py's own arithmetic, so the page and `agents.py cost` agree ---
+def price_projects(projects):
+    """Annotate every open story with the AI it will run on and its estimated cost, and every
+    feature, phase and project with planned / all-on-opus / spent. Nothing here if models.json or
+    agents.py is missing: the page then simply has no money in it."""
+    try:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("agents", shop / "agents.py")
+        A = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(A)
+        cfg0 = A.models_cfg()
+    except (Exception, SystemExit):
+        return {}
+    spent = {}
+    for m in A.all_agents():
+        if m.get("story_id"):
+            k = (m.get("project"), m["story_id"])
+            spent[k] = spent.get(k, 0) + (m.get("cost_usd") or 0)
+    parked = re.compile(r"^(Ideas|Cancelled|Archive)\b", re.I)
+    for p in projects:
+        pdir = root / p["name"]
+        if not p.get("board") or not pdir.is_dir():
+            continue
+        cfg, roles = A.models_cfg(pdir), A.roles_cfg(pdir)
+        top = "opus" if "opus" in cfg["models"] else max(cfg["models"], key=lambda k: cfg["models"][k]["tier"])
+        tot = {"plan": 0.0, "top": 0.0, "spent": 0.0}
+        for ph in p["board"]:
+            pt = {"plan": 0.0, "top": 0.0, "spent": 0.0}
+            for ft in ph["features"]:
+                ftc = {"plan": 0.0, "top": 0.0, "spent": 0.0}
+                for st in ft["stories"]:
+                    ftc["spent"] += spent.get((p["name"], st.get("id")), 0)
+                    alias = A.planned_alias(cfg, roles, st) or top
+                    st["alias"] = alias
+                    st["runs_here"] = not A.provider_ready(cfg, cfg["models"][alias]["provider"], pdir)
+                    if st["state"] == "done":
+                        continue
+                    st["est"] = round(A.story_cost(cfg, alias, st.get("size") or "M"), 2)
+                    ftc["plan"] += st["est"]
+                    ftc["top"] += A.story_cost(cfg, top, st.get("size") or "M")
+                ft["cost"] = {k: round(v, 2) for k, v in ftc.items()}
+                for k in pt:
+                    pt[k] += ftc[k]
+            ph["cost"] = {k: round(v, 2) for k, v in pt.items()}
+            if not parked.match(ph["phase"]):
+                for k in tot:
+                    tot[k] += pt[k]
+        p["cost"] = {**{k: round(v, 2) for k, v in tot.items()}, "top_alias": top,
+                     "ais": A.project_ais(pdir)}
+    return {k: {"model": m["model"], "provider": m["provider"], "price": m["price"], "tier": m["tier"],
+                "effort": m.get("effort", ""), "runs_here": not A.provider_ready(cfg0, m["provider"])}
+            for k, m in cfg0["models"].items()}
+
+
+models = price_projects(projects)
+
 rules = projects[0]["rules"] if projects else []
 for p in projects:
     p.pop("rules", None)
@@ -239,6 +295,7 @@ print(json.dumps({
     "root": str(root),
     "rules": rules,
     "roles": roles,
+    "models": models,
     "status": [digest(p) for p in projects if p.get("board")],
     "howto": howto,
     "skills": skills,

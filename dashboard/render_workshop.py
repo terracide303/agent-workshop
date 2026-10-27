@@ -133,7 +133,7 @@ tr:last-child td{border-bottom:0}
 .bar.big{height:8px;margin:10px 0 14px}
 .bar i{display:block;height:100%;background:var(--accent)}
 .fstrip{display:grid;gap:7px;margin-bottom:4px}
-.frow{display:grid;grid-template-columns:minmax(120px,1fr) 110px 44px;gap:10px;align-items:center;font-size:12.5px}
+.frow{display:grid;grid-template-columns:minmax(120px,1fr) 34px 110px 44px 62px;gap:10px;align-items:center;font-size:12.5px}
 .frow .bar{margin:0}
 .feat-link{cursor:pointer;border-radius:5px;padding:2px 4px;margin:0 -4px}
 .feat-link:hover{background:var(--sunk)}
@@ -198,6 +198,11 @@ select.priosel{font:inherit;font-size:10.5px;font-weight:600;padding:0 2px;borde
 .tag.prio.p7,.tag.prio.p6{background:var(--warn-bg);color:var(--warn)}
 .tag.chk{background:var(--warn-bg);color:var(--warn)}
 .tag.mdl{background:var(--warn-bg);color:var(--warn);border-color:transparent}
+.tag.mdl.off{background:transparent;color:var(--muted);border:1px dashed var(--line)}
+.tag.size{background:var(--sunk);color:var(--fg);border-color:var(--line)}
+.tag.cost{background:transparent;color:var(--muted);border-color:var(--line)}
+.costline{display:flex;gap:14px;flex-wrap:wrap;align-items:baseline;font-size:12.5px;margin:-4px 0 14px;color:var(--muted)}
+.costline b{color:var(--fg);font-size:14px}
 .copy{margin-left:auto;font:inherit;font-size:11px;border:1px solid var(--line);background:var(--surface);
   color:var(--muted);border-radius:5px;padding:1px 8px;cursor:pointer}
 .copy:hover{color:var(--ink);border-color:var(--accent)}
@@ -449,6 +454,18 @@ function board(p){
     ? [["backlog","Backlog"],["open","Ready"],["wip","Doing"],["check","Check"],["done","Done"]]
     : [["backlog","Backlog"],["open","Ready"],["wip","Doing"],["done","Done"]];
   const bar = (pct, big) => `<div class="bar${big?" big":""}"><i style="width:${pct}%"></i></div>`;
+  // a feature's priority ranks it against the others (board.py next does the same); cost is
+  // agents.py's estimate for what is left in it, from models.json's sizes and prices
+  const byPrio = fs => [...fs].sort((a,b)=>(b.prio||5)-(a.prio||5));
+  const fprio = f => `<span class="tag prio p${f.prio||5}" title="feature priority, 10 highest">!${f.prio||5}</span>`;
+  const fcost = f => `<span class="mono" title="estimated cost of what is left${f.cost&&f.cost.spent?`; spent so far $${f.cost.spent.toFixed(2)}`:""}">${
+    f.cost&&f.cost.plan?`$${f.cost.plan.toFixed(2)}`:(f.cost?"—":"")}</span>`;
+  const C = p.cost;
+  const costline = C ? `<div class="costline"><span>work left <b>$${C.plan.toFixed(2)}</b> with the planned AIs</span>
+      <span>$${C.top.toFixed(2)} all on ${esc(C.top_alias||"opus")}</span>
+      <span>spent $${C.spent.toFixed(2)}</span>
+      <span class="mono">agents.py cost ${esc(p.name)} · agents.py ais ${esc(p.name)}</span>
+      <span>estimates from models.json — the retrospective corrects them from what was measured</span></div>` : "";
 
   const card = (p, s) => `<div class="story st-${s.state}${s.blocked?" blocked":""}" draggable="true"
       data-line="${esc(s.line)}" data-state="${s.state}" data-ev="${esc(s.evidence)}"
@@ -467,7 +484,10 @@ function board(p){
         </select>`:`<span class="tag prio p${s.prio||5}" title="priority, 10 highest">!${s.prio||5}</span>`}
         ${s.who?`<span class="tag who">@${esc(s.who)}</span>`:'<span class="tag">unassigned</span>'}
         ${s.checker?`<span class="tag chk">+${esc(s.checker)} checks</span>`:""}
-        ${modelFor(s.who,s.model)?`<span class="tag mdl">${esc(modelFor(s.who,s.model))}</span>`:""}
+        ${s.size?`<span class="tag size" title="size: the amount of work">~${esc(s.size)}</span>`:""}
+        ${(s.alias||modelFor(s.who,s.model))?`<span class="tag mdl${s.runs_here===false?" off":""}"
+           title="${s.runs_here===false?"the AI it is planned on cannot run on this computer":"the AI it runs on"}">${esc(s.alias||modelFor(s.who,s.model))}</span>`:""}
+        ${s.est!=null?`<span class="tag cost" title="estimated cost${s.size?"":" (no size: counted as M)"}">$${s.est.toFixed(2)}</span>`:""}
         ${SERVED?`<button class="mini note">note</button>`:""}
         ${SERVED?`<button class="mini edit">edit</button>`:""}
         ${SERVED&&s.state!=="done"?`<button class="mini block">${s.blocked?"unblock":"hold"}</button>`:""}
@@ -493,19 +513,19 @@ function board(p){
     </div>`;
 
   if (boardView === "features" && !boardFeature) {
-    return controls + filters + p.board.filter(ph=>boardPhase ? ph.phase===boardPhase : !PARKED.test(ph.phase)).map(ph => {
+    return controls + costline + filters + p.board.filter(ph=>boardPhase ? ph.phase===boardPhase : !PARKED.test(ph.phase)).map(ph => {
       const fts = ph.features.filter(f=>f.total);
       if (!fts.length) return "";
       return `<div class="card">
         <div class="phhead"><h3 style="margin:0">${esc(ph.phase)}</h3>
-          <div class="phnum mono">${ph.features_done}/${ph.features_total} features · <b>${ph.pct}%</b></div></div>
+          <div class="phnum mono">${ph.features_done}/${ph.features_total} features · <b>${ph.pct}%</b>${ph.cost&&ph.cost.plan?` · $${ph.cost.plan.toFixed(2)} left`:""}</div></div>
         ${bar(ph.pct, true)}
-        <div class="fstrip">${fts.map(f=>`
+        <div class="fstrip">${byPrio(fts).map(f=>`
           <div class="frow feat-link" data-f="${esc(f.feature)}" title="show its stories">
             <span>${esc(f.feature)}
               ${f.refined?'<span class="tag who">refined</span>':'<span class="tag">not refined</span>'}
-            </span>${bar(f.pct)}
-            <span class="mono">${f.done_n}/${f.total}</span></div>`).join("")}</div>
+            </span>${fprio(f)}${bar(f.pct)}
+            <span class="mono">${f.done_n}/${f.total}</span>${fcost(f)}</div>`).join("")}</div>
       </div>`;
     }).join("") + `<p class="muted">Click a feature to see the stories attached to it.</p>`;
   }
@@ -521,7 +541,7 @@ function board(p){
       <div class="phhead">
         <h3 style="margin:0">${esc(ph.phase)}</h3>
         <div class="phnum mono">${ph.features_done}/${ph.features_total} features ·
-          ${ph.done_n}/${ph.total} stories · <b>${ph.pct}%</b>
+          ${ph.done_n}/${ph.total} stories · <b>${ph.pct}%</b>${ph.cost&&ph.cost.plan?` · $${ph.cost.plan.toFixed(2)} left`:""}
           ${SERVED?`<button class="mini addbtn" data-phase="${esc(ph.phase)}">+ ticket</button>`:""}</div>
       </div>
       ${SERVED?`<form class="tform" hidden data-phase="${esc(ph.phase)}">
@@ -544,19 +564,21 @@ function board(p){
             `<option value="${esc(r.id)}">@${esc(r.id)}</option>`).join("")}</select>
           <select name="checker"><option value="">nobody checks</option>
             ${((D.roles&&D.roles.roles)||[]).map(r=>`<option value="${esc(r.id)}">+${esc(r.id)} checks</option>`).join("")}</select>
-          <select name="model"><option value="">role default</option>
-            ${Object.keys((D.roles&&D.roles.models)||{}).map(k=>
-              `<option value="${esc(k)}">#${esc(k)}</option>`).join("")}</select>
+          <select name="model" title="the AI it runs on (models.json)"><option value="">role default</option>
+            ${Object.keys(D.models||(D.roles&&D.roles.models)||{}).map(k=>
+              `<option value="${esc(k)}">#${esc(k)}${D.models&&D.models[k]&&!D.models[k].runs_here?" (not here)":""}</option>`).join("")}</select>
+          <select name="size" title="the amount of work"><option value="">size?</option>
+            ${["XS","S","M","L","XL"].map(z=>`<option value="${z}">~${z}</option>`).join("")}</select>
           <button type="submit">Add</button>
           <button type="button" class="cancel">Cancel</button>
         </div>
       </form>`:""}
       ${bar(ph.pct, true)}
-      <div class="fstrip">${ph.features.filter(f=>f.total).map(f=>`
+      <div class="fstrip">${byPrio(ph.features.filter(f=>f.total)).map(f=>`
         <div class="frow feat-link${boardFeature===f.feature?" on":""}" data-f="${esc(f.feature)}"
              title="show only its stories">
-          <span>${esc(f.feature)}</span>${bar(f.pct)}
-          <span class="mono">${f.done_n}/${f.total}</span></div>`).join("")}</div>
+          <span>${esc(f.feature)}</span>${fprio(f)}${bar(f.pct)}
+          <span class="mono">${f.done_n}/${f.total}</span>${fcost(f)}</div>`).join("")}</div>
       <div class="kan" style="--ncols:${COLS.length}">${COLS.map(([k,label])=>{
         const list = st.filter(s=>s.state===k)
           .sort((a,b)=>(a.blocked?1:0)-(b.blocked?1:0) || (b.prio||5)-(a.prio||5));
@@ -581,7 +603,7 @@ function board(p){
     : `<p class="muted" style="margin:-4px 0 14px">Read-only: this page was opened as a file. Run
        <span class="mono">Workshop/serve.py</span> to drag tickets and have
        <span class="mono">${esc(p.board_doc||"the plan")}</span> rewritten.</p>`;
-  return controls + filters + ideaBox + note + (body || `<p class="empty">Nothing here yet.</p>`);
+  return controls + costline + filters + ideaBox + note + (body || `<p class="empty">Nothing here yet.</p>`);
 }
 
 const bar2 = (pct) => `<div class="bar big"><i style="width:${pct}%"></i></div>`;
@@ -724,7 +746,7 @@ function role(id){ return ((D.roles&&D.roles.roles)||[]).find(r=>r.id===id) || n
 function brief(p, s){
   const r = role(s.who);
   const model = modelFor(s.who, s.model);
-  const reads = (r ? r.reads : ["CLAUDE.md","RESUME_HERE.md"]).join(", ");
+  const reads = ((r && r.reads) || ["CLAUDE.md","RESUME_HERE.md"]).join(", ");   // roles.json gives no reads: the stories view crashed on every card
   return [
     r ? `You are the ${r.name} (@${r.id}) for ${p.name}. ${r.does}` : `You are working on ${p.name}.`,
     r && r.brief ? `Read your brief first: ../Workshop/${r.brief}. It says what you own, what you never do, and how to move your own tickets.` : "",
@@ -1309,7 +1331,7 @@ function draw(){
       const isNew = sel.value === "__new";
       api("/api/add", {project: cur.name, phase: f.dataset.phase,
         feature: isNew ? nf.value.trim() : sel.value, new_feature: isNew,
-        text: f.text.value, evidence: f.evidence.value, prio: f.prio.value,
+        text: f.text.value + (f.size && f.size.value ? " ~" + f.size.value : ""), evidence: f.evidence.value, prio: f.prio.value,
         who: f.who.value, model: f.model.value, checker: f.checker.value});
     };
   });
