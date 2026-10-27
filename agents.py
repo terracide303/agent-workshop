@@ -33,6 +33,7 @@ the routing kind @workshop names, or the role's default in roles.json.
                                              which AIs this project uses, and what the work left
                                              would cost with every other choice
     agents.py report                         cost and outcome per model and per kind
+    agents.py balance                        what is left on the accounts that report it (DeepSeek)
     agents.py selftest                       the checks below, made to fire
 
 <id> may be any unique prefix. State lives in .agents/ beside this file and never
@@ -1013,6 +1014,34 @@ def cmd_ais(a):
     print("work holds up: check '$ per ok' in agents.py report before switching a whole project.")
 
 
+def balances():
+    """[(AI, currency, amount, available)] for the providers whose API reports a balance. Only DeepSeek does
+    (GET /user/balance); Claude through Claude Code is a subscription with no balance to read. curl is used because
+    a python.org Python on macOS often has no certificates installed; the key goes in on stdin, never on the
+    command line."""
+    out = []
+    key = api_key("DEEPSEEK_API_KEY")
+    if key:
+        try:
+            r = subprocess.run(["curl", "-s", "-m", "20", "-K", "-", "-H", "Accept: application/json",
+                                "https://api.deepseek.com/user/balance"],
+                               input=f'header = "Authorization: Bearer {key}"\n', capture_output=True, text=True)
+            d = json.loads(r.stdout)
+            for b in d.get("balance_infos", []):
+                out.append(("DeepSeek", b.get("currency", "?"), float(b.get("total_balance", 0)), bool(d.get("is_available"))))
+        except (ValueError, OSError) as e:
+            out.append(("DeepSeek", "?", float("nan"), False))
+    return out
+
+
+def cmd_balance(a):
+    rows = balances()
+    if not rows:
+        print("no AI here reports a balance (Claude through Claude Code is a subscription)")
+    for name, cur, amount, ok in rows:
+        print(f"{name}: {amount:.2f} {cur}" + ("" if ok else "  (NOT available: top up before starting its agents)"))
+
+
 def cmd_report(a):
     rows = [json.loads(l) for l in (STATE / "ledger.jsonl").read_text(encoding="utf-8").splitlines()
             if l.strip()] if (STATE / "ledger.jsonl").exists() else []
@@ -1133,6 +1162,7 @@ s = sub.add_parser("cost"); s.add_argument("project")
 s = sub.add_parser("why"); s.add_argument("project"); s.add_argument("story", help="#id or part of the text")
 s = sub.add_parser("ais"); s.add_argument("project"); s.add_argument("--use", help="comma-separated providers from models.json")
 sub.add_parser("report")
+sub.add_parser("balance")
 sub.add_parser("selftest")
 s = sub.add_parser("_run"); s.add_argument("id"); s.add_argument("--prompt", required=True)
 s.add_argument("--resume", action="store_true")

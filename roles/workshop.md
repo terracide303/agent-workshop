@@ -80,7 +80,8 @@ it would cost with every other choice of AIs, and `--use` sets the project's cho
 ../agents.py clear  <id>                                    # one ticket, one session: done with it
 ```
 
-One seat per project at a time, a budget on every start (the default is in
+Check `../agents.py balance` before a run of DeepSeek seats: it is a prepaid account, and an agent that hits an empty
+one fails half-way. One seat per project at a time, a budget on every start (the default is in
 `models.json`), and a seat that went over budget or failed is read before it is
 retried. **Escalate, do not repeat:** a story that failed its evidence goes one
 kind up for its next try (`--kind hard`), never to the same model again.
