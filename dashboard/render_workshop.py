@@ -254,6 +254,7 @@ select.priosel{font:inherit;font-size:10.5px;font-weight:600;padding:0 2px;borde
 .real ul{margin:4px 0 0;padding-left:16px}
 .real li{margin:1px 0}
 .real.under .verdict{color:var(--ok)} .real.over .verdict{color:var(--bad)} .real.even .verdict{color:var(--fg)}
+.nf[hidden]{display:none}   /* display:grid below would otherwise show the form before "+ ticket" is pressed */
 .nf{display:grid;gap:10px;padding:12px;margin:8px 0 12px;border:1px solid var(--line);border-radius:10px;background:var(--sunk)}
 .nf label{display:grid;gap:4px;font-size:12px;color:var(--muted)}
 .nf input,.nf select{font:inherit;font-size:13px;padding:6px 8px;border-radius:7px;border:1px solid var(--line);background:var(--bg);color:var(--fg)}
