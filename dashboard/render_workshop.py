@@ -74,6 +74,18 @@ main{flex:1;display:flex;flex-direction:column;overflow:hidden}
 #refreshbtn{float:right;border:1px solid var(--line);background:var(--surface);color:var(--muted);
   border-radius:7px;width:30px;height:30px;font-size:15px;line-height:1;cursor:pointer;padding:0}
 #refreshbtn:hover{color:var(--ink);border-color:var(--accent)}
+#wsbtn{float:right;margin-right:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);
+  border-radius:8px;padding:5px 10px;font:inherit;font-size:12.5px;cursor:pointer}
+#wsbtn:hover{border-color:var(--accent)}
+.wspanel{position:fixed;z-index:40;right:18px;top:64px;width:min(440px,calc(100vw - 36px));padding:14px;
+  border-radius:12px;border:1px solid var(--line);background:var(--bg);box-shadow:0 10px 30px rgba(0,0,0,.45);font-size:12.5px}
+.wspanel h4{margin:0 0 6px}.wspanel p{margin:6px 0;color:var(--muted)}
+.wspanel .acts{display:flex;gap:8px;margin:10px 0}
+.wspanel .acts button{font:inherit;font-size:12.5px;padding:6px 12px;border-radius:8px;border:1px solid var(--line);
+  background:var(--sunk);color:var(--ink);cursor:pointer}
+.wspanel .acts button.primary{background:var(--accent);color:var(--bg);border-color:transparent;font-weight:600}
+.wspanel pre{white-space:pre-wrap;font-size:11px;max-height:120px;overflow:auto;background:var(--sunk);padding:6px;border-radius:6px}
+.wspanel .old{border-top:1px solid var(--line);margin-top:10px;padding-top:8px}
 #refreshbtn.spin{animation:sp .7s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
 .wait{margin-left:12px;font:inherit;font-size:12px;border:1px solid var(--line);background:var(--surface);
@@ -342,7 +354,7 @@ kbd{background:var(--sunk);border:1px solid var(--line);border-radius:4px;paddin
   </aside>
   <main>
     <div class="head">
-      <h2 id="title"></h2><button id="refreshbtn" title="refresh">⟳</button><p id="sub"></p>
+      <h2 id="title"></h2><button id="refreshbtn" title="refresh">⟳</button><button id="wsbtn" title="talk to Workshop from this browser or your phone">💬 Talk to Workshop</button><p id="sub"></p>
       <nav id="tabs"></nav>
     </div>
     <div class="body" id="view"></div>
@@ -1716,6 +1728,51 @@ document.addEventListener("click", async e => {
     if (confirm("Workshop will start:\n\n" + dry.out + "\n\nGo?")) {
       const r = await agentCall("next", {project: cur.name}); if (r) refresh();
     }
+  }
+});
+
+/* Talk to Workshop: Claude Code's Remote Control, optional -- the old way stays right next to it */
+let WSP = null;
+function wsClose(){ if (WSP) { WSP.remove(); WSP = null; } }
+async function wsPanel(){
+  wsClose();
+  WSP = document.createElement("div"); WSP.className = "wspanel";
+  const startLine = `You are @workshop. Run \`git pull\` in ../workshop first, then read ../workshop/roles/workshop.md, then run ../workshop/board.py inbox --who workshop and ../workshop/agents.py list, and do what it says.`;
+  const old = `<div class="old"><b>Or the old way</b><p>Paste this into any Claude Code session (any folder beside the workshop):</p>
+    <pre>${esc(startLine)}</pre><div class="acts"><button class="wscopy">Copy the line</button></div></div>`;
+  if (!SERVED) {
+    WSP.innerHTML = `<h4>Talk to Workshop</h4><p>Open this page through <span class="mono">./page.sh</span> to start
+      Workshop for the browser from here.</p>${old}<div class="acts"><button class="wsx">Close</button></div>`;
+  } else {
+    let st = {}; try { st = await (await fetch("/api/workshop", {cache:"no-store"})).json(); } catch(e) {}
+    WSP.innerHTML = `<h4>Talk to Workshop ${st.running ? "· <span style='color:var(--ok)'>running</span>" : ""}</h4>
+      <p>Workshop runs here on this computer, in Claude Code. You talk to it at <b>claude.ai/code</b> in any browser,
+      or in the Claude app on your phone. It picks the AI for every card and starts, watches and stops the agents
+      (those can run on DeepSeek too). It needs your claude.ai login and this computer switched on.</p>
+      <div class="acts">${st.running
+        ? `<button class="primary wsopen" data-url="${esc(st.url||"https://claude.ai/code")}">Open Workshop</button><button class="wsstop">Stop it</button>`
+        : `<button class="primary wsstart">Start Workshop for the browser</button>`}
+        <button class="wsx">Close</button></div>
+      ${st.running ? `<p>In claude.ai/code it is called <b>${esc(st.name||"Workshop")}</b> (started ${esc(st.started||"")}).</p>` : ""}
+      <div class="wsmsg"></div>${old}`;
+  }
+  document.body.appendChild(WSP);
+}
+document.addEventListener("click", async e => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.id === "wsbtn") { WSP ? wsClose() : wsPanel(); return; }
+  if (!WSP || !WSP.contains(b)) return;
+  if (b.classList.contains("wsx")) { wsClose(); return; }
+  if (b.classList.contains("wscopy")) { navigator.clipboard.writeText(WSP.querySelector("pre").textContent); b.textContent = "Copied"; return; }
+  if (b.classList.contains("wsopen")) { window.open(b.dataset.url, "_blank"); return; }
+  if (b.classList.contains("wsstart") || b.classList.contains("wsstop")) {
+    const what = b.classList.contains("wsstart") ? "start" : "stop";
+    b.disabled = true; b.textContent = what === "start" ? "starting…" : "stopping…";
+    const r = await fetch("/api/workshop/" + what, {method:"POST", headers:{"Content-Type":"application/json"}, body:"{}"});
+    const j = await r.json().catch(() => ({}));
+    if (j.error) { await wsPanel(); WSP.querySelector(".wsmsg").innerHTML = `<pre>${esc(j.error)}</pre>`; return; }
+    await wsPanel();
+    if (what === "start" && j.running) window.open(j.url || "https://claude.ai/code", "_blank");
   }
 });
 

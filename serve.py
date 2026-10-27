@@ -139,6 +139,8 @@ class H(BaseHTTPRequestHandler):
                 self._send(200, regenerate())
             except subprocess.CalledProcessError as e:
                 self._send(500, f"<pre>generation failed:\n{e}</pre>")
+        elif self.path == "/api/workshop":
+            self._send(200, json.dumps(workshop_remote()), "application/json")
         elif self.path == "/api/agents":
             # live, and cheap: the agents' own state files, no rebuild. The page polls this.
             self._send(200, json.dumps(agents_now()), "application/json")
@@ -215,6 +217,9 @@ class H(BaseHTTPRequestHandler):
                 print(f"  your AIs: {', '.join(use)}")
                 regenerate()
                 return self._send(200, json.dumps({"ok": True}), "application/json")
+            if self.path in ("/api/workshop/start", "/api/workshop/stop"):
+                st = workshop_remote(self.path.endswith("start"), self.path.endswith("stop"))
+                return self._send(200 if not st.get("error") else 400, json.dumps(st), "application/json")
             if self.path.startswith("/api/agent/"):
                 return self.agent(self.path.rsplit("/", 1)[1], req)
             project = req["project"]
@@ -401,6 +406,67 @@ class H(BaseHTTPRequestHandler):
 
     def log_message(self, *a):
         pass
+
+
+REMOTE = SHOP / ".agents" / "workshop-remote.json"
+
+
+def workshop_remote(start=False, stop=False):
+    """Talk to Workshop from a browser or a phone: `claude remote-control` run in this folder, so the
+    session reads CLAUDE.md here and is @workshop. Optional -- pasting a seat's line from START.md into
+    Claude Code works exactly as before. It needs a claude.ai login (not an API key) and no
+    ANTHROPIC_BASE_URL, and the folder must have been trusted once by running `claude` in it."""
+    import signal, time
+    st = json.loads(REMOTE.read_text()) if REMOTE.exists() else {}
+    pid = st.get("pid")
+    def alive(p):
+        try:
+            os.kill(p, 0); return True
+        except (OSError, TypeError):
+            return False
+    running = bool(pid) and alive(pid)
+    log = SHOP / ".agents" / "workshop-remote.log"
+    if stop and running:
+        try:
+            os.killpg(pid, signal.SIGTERM)
+        except OSError:
+            os.kill(pid, signal.SIGTERM)
+        for _ in range(50):
+            if not alive(pid):
+                break
+            time.sleep(0.1)
+        running = False
+    if start and not running:
+        if os.environ.get("ANTHROPIC_BASE_URL"):
+            return {"running": False, "error": "ANTHROPIC_BASE_URL is set: Remote Control only talks to "
+                    "Anthropic itself. Unset it for the page server."}
+        REMOTE.parent.mkdir(exist_ok=True)
+        name = f"Workshop ({__import__('socket').gethostname().split('.')[0]})"
+        out = open(log, "w")
+        p = subprocess.Popen(["claude", "remote-control", "--name", name], cwd=str(SHOP), stdin=subprocess.DEVNULL,
+                             stdout=out, stderr=subprocess.STDOUT, start_new_session=True)
+        st = {"pid": p.pid, "name": name, "started": time.strftime("%Y-%m-%d %H:%M")}
+        REMOTE.write_text(json.dumps(st))
+        time.sleep(6)                          # long enough to fail on login or trust, or to connect
+        running = alive(p.pid)
+        said = log.read_text(errors="replace") if log.exists() else ""
+        if running and re.search(r"^\s*Error:", said, re.M):
+            # it can print its error and linger a moment: an error means it did not start
+            try:
+                os.killpg(p.pid, signal.SIGTERM)
+            except OSError:
+                pass
+            running = False
+    tail = log.read_text(errors="replace")[-1500:] if log.exists() else ""
+    tail = re.sub(r"\x1b\[[0-9;?]*[A-Za-z]", "", tail)      # the server's colours
+    url = (re.findall(r"https://claude\.ai/code\S*", tail) or ["https://claude.ai/code"])[-1]
+    res = {"running": running, "name": st.get("name", ""), "started": st.get("started", ""), "url": url,
+           "log": tail.strip()[-600:]}
+    if start and not running:
+        res["error"] = ("Remote Control did not stay up. " + ("This folder is not trusted yet: open a terminal "
+                        "in it, run `claude` once and accept, then try again. " if "trust" in tail.lower() else "")
+                        + "What it said: " + tail.strip()[-400:])
+    return res
 
 
 def agents_now():
