@@ -225,6 +225,15 @@ select.priosel{font:inherit;font-size:10.5px;font-weight:600;padding:0 2px;borde
 .aichip[aria-pressed=true]{background:var(--ok-bg);color:var(--ok);border-color:transparent}
 .aichip .warn{color:var(--warn);font-size:10.5px}
 .ibtn{width:22px;height:22px;padding:0;font-style:italic;font-weight:700}
+.apsw{display:inline-flex;gap:8px;align-items:center}
+.apbtn{font:inherit;font-size:12px;font-weight:700;padding:4px 12px 4px 8px;border-radius:99px;cursor:pointer;
+  border:1px solid var(--line);background:var(--sunk);color:var(--muted);display:inline-flex;gap:7px;align-items:center}
+.apbtn i{width:26px;height:14px;border-radius:99px;background:var(--line);position:relative;display:inline-block}
+.apbtn i::after{content:"";position:absolute;top:2px;left:2px;width:10px;height:10px;border-radius:50%;background:var(--bg);transition:left .15s}
+.apbtn.on{background:var(--ok-bg);color:var(--ok);border-color:transparent}
+.apbtn.on i{background:var(--ok)} .apbtn.on i::after{left:14px}
+.apsw input{width:54px;font:inherit;font-size:12px;padding:2px 5px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--fg)}
+.aplast{font-size:11.5px;color:var(--muted)}
 .wsnext{background:var(--accent);color:var(--bg);border:0;font-weight:600;padding:5px 12px}
 .aitable{margin:-4px 0 14px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--sunk);font-size:12px}
 .aitable table{width:100%;border-collapse:collapse}.aitable td{padding:4px 8px 4px 0;vertical-align:top}
@@ -536,7 +545,8 @@ function board(p){
         <button class="ibtn" title="every AI in models.json and its price">i</button></span>
       <span>work left <b>${money2(C.plan)}</b></span>
       <span>spent <b>${money2(C.spent)}</b></span>
-      ${SERVED?`<button class="wsnext" title="Workshop starts the next ready card of every free seat">▶ Let Workshop start the next cards</button>`:""}
+      ${SERVED?`<button class="wsnext" title="once: Workshop starts the next ready card of every free seat, after you confirm the list">▶ Start the next cards now</button>
+        <span class="apsw" data-p="${esc(p.name)}"></span>`:""}
     </div>
     <div class="aitable" hidden>
       <p class="muted">Workshop only plans on <b>your</b> AIs. The rest are here to compare. Prices per million tokens
@@ -1674,8 +1684,22 @@ function paintAgentList(){
         ? `<button class="mini astop" data-id="${esc(a.id)}">stop</button>`
         : `<button class="mini aclear" data-id="${esc(a.id)}">clear</button>`}</td></tr>`).join("")}</table>`;
 }
+let AP = {};
+function paintAutopilot(){
+  document.querySelectorAll(".apsw").forEach(el => {
+    if (el.contains(document.activeElement)) return;      // do not repaint under the cursor
+    const c = AP[el.dataset.p] || {on:false, daily:5, spent_today:0, log:[]};
+    const last = (c.log||[]).slice(-1)[0];
+    el.innerHTML = `<button class="apbtn${c.on?" on":""}" title="${c.on
+        ? "ON: Ready cards are picked up by themselves, every minute, until today's budget is spent. Click to switch off."
+        : "OFF: nothing starts by itself. Click to let Workshop pick up Ready cards on its own."}"><i></i>Autopilot ${c.on?"ON":"off"}</button>
+      <span>$<input class="apdaily" type="number" min="0.5" max="500" step="0.5" value="${c.daily}" title="the most it may spend a day"> a day</span>
+      <span class="aplast">${c.on||c.spent_today?`today ${money2(c.spent_today)} of ${money2(c.daily)}`:""}${last?" · "+esc(last.replace(/^\S+ \S+\s+\S+:\s*/,"")):""}</span>`;
+  });
+}
 function paintAgents(){
   paintAgentList();
+  paintAutopilot();
   document.querySelectorAll(".aslot").forEach(el => {
     if (el.dataset.form) return;
     const a = agentsOn(el.dataset.p, +el.dataset.sid)[0];
@@ -1706,6 +1730,7 @@ async function pollAgents(){
   try { const r = await fetch("/api/agents", {cache:"no-store"}); if (!r.ok) return; list = await r.json(); }
   catch(e){ return; }
   AG = list;
+  try { AP = await (await fetch("/api/autopilot", {cache:"no-store"})).json(); } catch(e) {}
   const now = new Set(AG.filter(a=>a.status==="running"||a.status==="starting").map(a=>a.id));
   const ended = [...agLive].some(id => !now.has(id));
   agLive = now;
@@ -1749,6 +1774,14 @@ document.addEventListener("click", async e => {
     await agentCall("stop", {id: b.dataset.id});
   } else if (b.classList.contains("aclear")) {
     await agentCall("clear", {id: b.dataset.id});
+  } else if (b.classList.contains("apbtn")) {
+    const sw = b.closest(".apsw"), name = sw.dataset.p, c = AP[name] || {on:false, daily:5};
+    const daily = sw.querySelector(".apdaily").value;
+    if (!c.on && !confirm(`Autopilot on for ${name}?\n\nEvery minute Workshop starts an agent on the next Ready card of each free seat, with that card's AI, until $${daily} is spent today. Cards you drag to Doing yourself are left alone.`)) return;
+    const r = await fetch("/api/autopilot", {method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({project: name, on: !c.on, daily})});
+    if (!r.ok) { alert(await r.text()); return; }
+    AP = (await r.json()).autopilot || AP; paintAutopilot();
   } else if (b.classList.contains("wsnext")) {
     const dry = await agentCall("next", {project: cur.name, dry_run: true});
     if (!dry) return;
@@ -1819,6 +1852,14 @@ document.addEventListener("click", async e => {
       : `<div class="wserr"><b>Workshop did not start.</b><pre>${esc(st.error||"no answer from the page server")}</pre></div>`;
   }
   wsState();
+});
+
+document.addEventListener("change", async e => {
+  const i = e.target.closest(".apdaily"); if (!i) return;
+  const name = i.closest(".apsw").dataset.p, c = AP[name] || {on:false};
+  const r = await fetch("/api/autopilot", {method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({project: name, on: c.on, daily: i.value})});
+  if (r.ok) { AP = (await r.json()).autopilot || AP; i.blur(); paintAutopilot(); } else alert(await r.text());
 });
 
 /* the right-click menu: every action on a card in one place */

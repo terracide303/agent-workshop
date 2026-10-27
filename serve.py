@@ -141,6 +141,8 @@ class H(BaseHTTPRequestHandler):
                 self._send(500, f"<pre>generation failed:\n{e}</pre>")
         elif self.path == "/api/workshop":
             self._send(200, json.dumps(workshop_remote()), "application/json")
+        elif self.path == "/api/autopilot":
+            self._send(200, json.dumps(autopilot_now()), "application/json")
         elif self.path == "/api/agents":
             # live, and cheap: the agents' own state files, no rebuild. The page polls this.
             self._send(200, json.dumps(agents_now()), "application/json")
@@ -220,6 +222,20 @@ class H(BaseHTTPRequestHandler):
             if self.path in ("/api/workshop/start", "/api/workshop/stop"):
                 st = workshop_remote(self.path.endswith("start"), self.path.endswith("stop"))
                 return self._send(200 if not st.get("error") else 400, json.dumps(st), "application/json")
+            if self.path == "/api/autopilot":
+                name = req["project"]
+                if not re.fullmatch(r"[\w.-]{1,80}", name):
+                    raise ValueError("bad project")
+                cmd = [sys.executable, str(SHOP / "agents.py"), "autopilot", name,
+                       "--on" if req.get("on") else "--off"]
+                if req.get("daily") not in (None, ""):
+                    cmd += ["--daily", str(float(req["daily"]))]
+                r = subprocess.run(cmd, capture_output=True, text=True, timeout=60, cwd=str(SHOP))
+                if r.returncode != 0:
+                    raise ValueError((r.stdout + r.stderr).strip())
+                print(f"  {r.stdout.strip()}")
+                return self._send(200, json.dumps({"ok": True, "out": r.stdout.strip(),
+                                                   "autopilot": autopilot_now()}), "application/json")
             if self.path.startswith("/api/agent/"):
                 return self.agent(self.path.rsplit("/", 1)[1], req)
             project = req["project"]
@@ -408,6 +424,36 @@ class H(BaseHTTPRequestHandler):
         pass
 
 
+def autopilot_now():
+    """Per project: on/off, daily budget, spent today, and the last lines of the autopilot log."""
+    try:
+        spec2 = importlib.util.spec_from_file_location("agents", SHOP / "agents.py")
+        A = importlib.util.module_from_spec(spec2)
+        spec2.loader.exec_module(A)
+        cfg = A.autopilot_cfg()
+        logf = SHOP / ".agents" / "autopilot.log"
+        lines = logf.read_text(encoding="utf-8").splitlines()[-40:] if logf.exists() else []
+        return {n: {"on": bool(c.get("on")), "daily": c.get("daily", 5.0),
+                    "spent_today": round(A.spent_today(n), 4),
+                    "log": [l for l in lines if f"  {n}:" in l][-5:]} for n, c in cfg.items()}
+    except Exception:
+        return {}
+
+
+def autopilot_loop():
+    """Every minute, one autopilot round (agents.py autopilot --tick). Only projects with the
+    autopilot switched on are touched; with none on, it does nothing at all."""
+    import time
+    while True:
+        time.sleep(60)
+        try:
+            if any(v.get("on") for v in autopilot_now().values()):
+                subprocess.run([sys.executable, str(SHOP / "agents.py"), "autopilot", "--tick"],
+                               capture_output=True, text=True, timeout=300, cwd=str(SHOP))
+        except Exception as e:
+            print(f"  autopilot round failed: {e}")
+
+
 REMOTE = SHOP / ".agents" / "workshop-remote.json"
 
 
@@ -510,6 +556,7 @@ if __name__ == "__main__":
     print(f"workshop on http://127.0.0.1:{PORT}   (Ctrl-C to stop)")
     rebuild_behind()
     print("moves are written to the project's plan file and left uncommitted")
+    threading.Thread(target=autopilot_loop, daemon=True).start()
     try:
         ThreadingHTTPServer(("127.0.0.1", PORT), H).serve_forever()
     except KeyboardInterrupt:

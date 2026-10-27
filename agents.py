@@ -16,6 +16,11 @@ the routing kind @workshop names, or the role's default in roles.json.
     agents.py next   <project> [--budget 2] [--dry-run]
                                              Workshop's dispatch: start the next ready card of every
                                              seat that has one and is free
+    agents.py autopilot <project> [--on | --off] [--daily 5]
+                                             Ready cards are picked up by themselves, within a daily
+                                             budget; this computer only (.agents/autopilot.json)
+    agents.py autopilot --tick               one round for every project that has it on (the page
+                                             server runs this every minute; cron can too)
     agents.py status <id>                    one agent in detail, with its last steps
     agents.py tail   <id> [-n 30] [--follow] what it did, readable
     agents.py send   <id> "message"          the next instruction, in the same session
@@ -505,6 +510,81 @@ def cmd_next(a):
     for role, st, alias, no in plan:
         print(f"{'would start' if a.dry_run and not no else 'cannot start' if no else 'started'}  "
               f"@{role} on #{st['id']} {st['text'][:50]} with {alias}" + (f" -- {no}" if no else ""))
+
+
+AUTOPILOT = "autopilot.json"
+
+
+def autopilot_cfg():
+    return load_json(STATE / AUTOPILOT, {}) or {}
+
+
+def spent_today(project_name):
+    today = datetime.now().strftime("%Y-%m-%d")
+    return sum(m.get("cost_usd") or 0 for m in all_agents()
+               if m.get("project") == project_name and (m.get("started") or "").startswith(today))
+
+
+def autopilot_log(text):
+    STATE.mkdir(parents=True, exist_ok=True)
+    with open(STATE / "autopilot.log", "a", encoding="utf-8") as f:
+        f.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M')}  {text}\n")
+
+
+def autopilot_tick():
+    """One round: for every project with the autopilot on, start the next ready card of every free
+    seat (dispatch), each agent's budget capped by what is left of today's. Quiet when there is
+    nothing to do, so a minute-by-minute loop costs nothing."""
+    import contextlib, io
+    for name, c in autopilot_cfg().items():
+        if not c.get("on"):
+            continue
+        try:
+            pdir = project_dir(name)
+        except SystemExit:
+            continue
+        left = float(c.get("daily", 5)) - spent_today(pdir.name)
+        if left <= 0.01:
+            if not c.get("_said_spent") == datetime.now().strftime("%Y-%m-%d"):
+                autopilot_log(f"{name}: today's budget is spent, waiting for tomorrow")
+                cfg = autopilot_cfg(); cfg[name]["_said_spent"] = datetime.now().strftime("%Y-%m-%d")
+                save_autopilot(cfg)
+            continue
+        per = min(models_cfg(pdir).get("agents", {}).get("default_budget_usd", 2.0), left)
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            plan = dispatch(str(pdir), budget=round(per, 2))
+        for role, st, alias, no in plan:
+            if not no:
+                autopilot_log(f"{name}: started @{role} on #{st['id']} {st['text'][:50]} with {alias} (budget ${per:.2f})")
+
+
+def save_autopilot(cfg):
+    STATE.mkdir(parents=True, exist_ok=True)
+    tmp = STATE / (AUTOPILOT + ".tmp")
+    tmp.write_text(json.dumps(cfg, indent=1), encoding="utf-8")
+    os.replace(tmp, STATE / AUTOPILOT)
+
+
+def cmd_autopilot(a):
+    if a.tick:
+        autopilot_tick()
+        return
+    if not a.project:
+        sys.exit("FAIL  autopilot needs a project, or --tick")
+    pdir = project_dir(a.project)
+    cfg = autopilot_cfg()
+    c = cfg.setdefault(pdir.name, {"on": False, "daily": 5.0})
+    if a.on or a.off:
+        c["on"] = bool(a.on)
+        autopilot_log(f"{pdir.name}: autopilot {'ON' if a.on else 'off'}")
+    if a.daily is not None:
+        if not 0 < a.daily <= 500:
+            sys.exit("FAIL  a daily budget is between $0 and $500")
+        c["daily"] = a.daily
+    save_autopilot(cfg)
+    print(f"{pdir.name}: autopilot {'ON' if c['on'] else 'off'}, daily budget ${c['daily']:.2f}, "
+          f"spent today ${spent_today(pdir.name):.2f}")
 
 
 def ago(iso):
@@ -1014,6 +1094,8 @@ s.add_argument("--wait", action="store_true"); s.add_argument("--timeout", type=
 s = sub.add_parser("list"); s.add_argument("--all", action="store_true")
 s = sub.add_parser("next"); s.add_argument("project"); s.add_argument("--budget", type=float)
 s.add_argument("--dry-run", action="store_true")
+s = sub.add_parser("autopilot"); s.add_argument("project", nargs="?"); s.add_argument("--on", action="store_true")
+s.add_argument("--off", action="store_true"); s.add_argument("--daily", type=float); s.add_argument("--tick", action="store_true")
 s = sub.add_parser("status"); s.add_argument("id")
 s = sub.add_parser("tail"); s.add_argument("id"); s.add_argument("-n", type=int, default=30)
 s.add_argument("--follow", action="store_true")
